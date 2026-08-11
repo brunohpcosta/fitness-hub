@@ -25,6 +25,10 @@
 		{
 			"bucket_name": "fitness-hub-photos",
 			"binding": "PHOTOS"
+		},
+		{
+			"bucket_name": "fitness-hub-raw",
+			"binding": "RAW"
 		}
 	]
 	/**
