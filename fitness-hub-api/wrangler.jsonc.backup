@@ -24,7 +24,7 @@
 	"r2_buckets": [
 		{
 			"bucket_name": "fitness-hub-photos",
-			"binding": "PHOTOS"
+			"binding": "fitness_hub_photos"
 		}
 	]
 	/**
