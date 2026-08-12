@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Fitness Hub">
+<meta name="theme-color" content="#0a0a0c">
+<title>Fitness Hub</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<style>
+:root{
+  --bg:#0a0a0c; --s1:#131317; --s2:#1a1a20; --s3:#22222a;
+  --t1:#f4f4f6; --t2:#9494a2; --t3:#5e5e6c;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.14);
+  --accent:#fa114f; --accent-dim:rgba(250,17,79,.13);
+  --blue:#4d9fff; --green:#2ecc9b; --amber:#ffb020; --violet:#9b7bff; --teal:#3ad3d3;
+  /* System stack rather than a CDN webfont: nothing to fetch, so the app renders
+     identically with no signal. On iOS this resolves to SF Pro / SF Mono. */
+  --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Inter,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,'JetBrains Mono',monospace;
+  --r:10px; --rc:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+
+#shell{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+#top{position:sticky;top:0;z-index:40;background:rgba(10,10,12,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.wrap{max-width:1180px;margin:0 auto;width:100%}
+.topin{padding:12px 18px 0}
+.tophead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.eyebrow{font-size:11px;letter-spacing:.14em;color:var(--accent);font-weight:500}
+h1{font-size:25px;font-weight:600;letter-spacing:-.025em;line-height:1.15;margin-top:2px}
+.sync{font-size:11px;color:var(--t3);margin-top:3px;display:flex;align-items:center;gap:5px}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--amber);flex:none}
+.protobadge{font-size:10px;letter-spacing:.09em;color:var(--amber);border:1px solid rgba(255,176,32,.3);background:rgba(255,176,32,.07);padding:4px 8px;border-radius:20px;white-space:nowrap;flex:none}
+
+#rail{display:flex;gap:4px;padding:14px 18px 10px;overflow-x:auto;scrollbar-width:none}
+#rail::-webkit-scrollbar{display:none}
+.rd{flex:1;min-width:46px;border-top:2px solid var(--line);padding:9px 2px 0;text-align:left;display:block;border-radius:0}
+.rd.today{border-top-color:var(--accent)}
+.rd .rl{display:block;font-size:10px;letter-spacing:.1em;color:var(--t3)}
+.rd.today .rl{color:var(--accent)}
+.rd .rs{display:block;font-size:12px;font-weight:500;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd.today .rs{color:var(--t1)}
+.rd.past{opacity:.62}
+#railnote{padding:0 18px 11px;font-size:11px;color:var(--t3)}
+
+#body{flex:1;display:flex}
+#side{display:none}
+#main{flex:1;min-width:0;padding:16px 18px calc(94px + env(safe-area-inset-bottom))}
+.page{display:none}
+.page.on{display:block}
+
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--rc);padding:15px 16px;margin-bottom:11px}
+.ch{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:13px}
+.ct{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.cm{font-size:12px;color:var(--t3)}
+.seclab{font-size:11px;letter-spacing:.14em;color:var(--t3);font-weight:500;margin:20px 2px 9px}
+.seclab:first-child{margin-top:2px}
+
+.tile{background:var(--s2);border-radius:var(--r);padding:11px 12px}
+.tile .tl{font-size:11px;color:var(--t2);margin-bottom:5px}
+.tile .tv{font-size:19px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.tile .tsub{font-size:11px;color:var(--t3);margin-top:4px}
+
+.btn{border:1px solid var(--line2);border-radius:var(--r);padding:9px 14px;font-size:13px;font-weight:500;transition:background .12s}
+.btn:hover{background:var(--s3)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.f{flex:1;text-align:center}
+
+input[type=text],input[type=number],select{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;outline:none}
+input:focus,select:focus{border-color:var(--line2)}
+label.fl{display:block;font-size:11px;color:var(--t2);margin-bottom:5px}
+.fgrid{display:grid;gap:9px}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;height:22px}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--s3);border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--t1);margin-top:-8px;border:none;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-track{height:4px;background:var(--s3);border-radius:2px}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--t1);border:none}
+.sl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+.sl b{font-weight:500;color:var(--accent)}
+.sblock{margin-bottom:14px}
+
+.seg{display:flex;gap:4px;background:var(--s2);padding:3px;border-radius:var(--r);margin-bottom:13px}
+.seg button{flex:1;padding:7px 4px;font-size:12px;font-weight:500;color:var(--t2);border-radius:7px}
+.seg button.on{background:var(--s3);color:var(--t1)}
+
+.warn{border-left:2px solid var(--amber);background:rgba(255,176,32,.07);padding:9px 12px;font-size:12px;color:#ffc95e;line-height:1.55;margin-bottom:8px}
+.ok{border-left:2px solid var(--green);background:rgba(46,204,155,.07);padding:9px 12px;font-size:12px;color:#6fe0bd;line-height:1.55;margin-bottom:8px;border-radius:0 var(--r) var(--r) 0}
+.info{border-left:2px solid var(--blue);background:rgba(77,159,255,.07);padding:9px 12px;font-size:12px;color:#9cc9ff;line-height:1.55;margin-bottom:8px}
+.note{font-size:11px;color:var(--t3);line-height:1.6;margin-top:10px}
+
+.tlbar{position:relative;height:28px;background:var(--s2);border-radius:var(--r);margin-top:8px}
+.tlbar i{position:absolute;top:5px;width:2px;height:18px;background:var(--blue);border-radius:1px}
+.tlbar i.caf{background:var(--amber)}
+.tlx{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px}
+
+.sched{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin-top:10px}
+.sched span{background:var(--s2);border-radius:8px;padding:7px 4px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--t2)}
+.sched span.caf{color:var(--amber);background:rgba(255,176,32,.09)}
+
+.stub{border:1px dashed var(--line2);border-radius:var(--rc);padding:26px 18px;text-align:center;color:var(--t3);font-size:13px;line-height:1.7}
+.stub b{display:block;color:var(--t2);font-weight:500;font-size:14px;margin-bottom:5px}
+
+#nav{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;background:rgba(10,10,12,.92);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#nav button{flex:1;padding:8px 1px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:8.5px;color:var(--t3);min-width:0}
+#nav button.on{color:var(--accent)}
+#nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+@media(min-width:900px){
+  #body{gap:26px;padding:0 18px;max-width:1180px;margin:0 auto;width:100%}
+  #main{padding:20px 0 60px}
+  #side{display:block;width:190px;flex:none;padding:20px 0 60px;position:sticky;top:170px;align-self:flex-start}
+  #side button{display:flex;align-items:center;gap:11px;width:100%;padding:8px 11px;border-radius:var(--r);font-size:14px;color:var(--t2);margin-bottom:1px}
+  #side button.on{background:var(--s2);color:var(--t1)}
+  #side button.on .i{color:var(--accent)}
+  #side svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #nav{display:none}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="shell">
+
+<header id="top">
+  <div class="wrap topin">
+    <div class="tophead">
+      <div style="min-width:0">
+        <div class="eyebrow" id="eyebrow">coach</div>
+        <h1 id="title">Running</h1>
+        <div class="sync"><span class="dot"></span><span id="syncline">No data connected</span></div>
+      </div>
+      <div class="protobadge">step 1 · calculator only</div>
+    </div>
+  </div>
+  <div class="wrap"><div id="rail"></div><div id="railnote"></div></div>
+</header>
+
+<div id="body">
+  <nav id="side"></nav>
+  <main id="main">
+
+    <section class="page" id="p-hub"></section>
+    <section class="page" id="p-summary"></section>
+    <section class="page" id="p-training"></section>
+
+    <!-- RUNNING — the only tab with real function in step 1 -->
+    <section class="page on" id="p-running">
+
+      <div class="seclab">race</div>
+      <div class="card">
+        <div class="ch"><span class="ct" id="racename">Solo 42.195 km</span><span class="cm num" id="racecount"></span></div>
+        <div class="grid g3">
+          <div class="tile"><div class="tl">Date</div><div class="tv num" id="racedate">22 Aug</div><div class="tsub">Saturday</div></div>
+          <div class="tile"><div class="tl">Target</div><div class="tv num">sub-4h</div><div class="tsub">5:41/km</div></div>
+          <div class="tile"><div class="tl">Fuel rate</div><div class="tv num">65 g/h</div><div class="tsub">not 90 — see below</div></div>
+        </div>
+        <div class="note">These defaults mirror <span class="num">settings</span> in D1 (<span class="num">race_date</span>, <span class="num">race_fuel_g_per_hour</span>, <span class="num">race_gel_carbs_g</span>, <span class="num">race_target_minutes</span>). They are hardcoded here only because step 1 has no API yet — step 4 reads them live so this screen can never drift from the database.</div>
+      </div>
+
+      <div class="seclab">refuel calculator</div>
+      <div class="card">
+
+        <label class="fl" for="fp">Fuel product</label>
+        <select id="fp" style="margin-bottom:10px"></select>
+
+        <div class="fgrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+          <div><label class="fl" for="fc">Carbs g</label><input type="number" id="fc" value="23.5" step="0.5" min="1"></div>
+          <div><label class="fl" for="fk">Caffeine mg</label><input type="number" id="fk" value="0" step="5" min="0"></div>
+          <div><label class="fl" for="fn">Sodium mg</label><input type="number" id="fn" value="" placeholder="?" step="10" min="0"></div>
+        </div>
+
+        <div class="sblock">
+          <div class="sl"><span>Distance</span><b class="num" id="okm">42.2 km</b></div>
+          <input type="range" id="skm" min="5" max="50" step="0.1" value="42.2">
+        </div>
+
+        <div class="sblock">
+          <div class="sl"><span>Target pace</span><b class="num" id="opace">5:41/km</b></div>
+          <input type="range" id="space" min="4.5" max="7.5" step="0.01667" value="5.6833">
+        </div>
+
+        <div class="sblock">
+          <div class="sl"><span>Intake rate</span><b class="num" id="orate">65 g/h</b></div>
+          <input type="range" id="srate" min="20" max="110" step="5" value="65">
+          <div style="font-size:12px;color:var(--t2);margin-top:6px" id="oband"></div>
+        </div>
+
+        <div class="sblock">
+          <div class="sl"><span>Body weight</span><b class="num" id="owt">79 kg</b></div>
+          <input type="range" id="swt" min="55" max="110" step="0.5" value="79">
+        </div>
+
+        <div class="grid g4" style="margin-bottom:12px">
+          <div class="tile"><div class="tl">Duration</div><div class="tv num" id="vdur">—</div></div>
+          <div class="tile"><div class="tl">Every</div><div class="tv num" id="vint">—</div></div>
+          <div class="tile"><div class="tl">Serves</div><div class="tv num" id="vn">—</div><div class="tsub" id="vnsub">carry one spare</div></div>
+          <div class="tile"><div class="tl">Carbs</div><div class="tv num" id="vc">—</div><div class="tsub" id="vcsub"></div></div>
+        </div>
+
+        <div style="font-size:11px;color:var(--t2)">Take at</div>
+        <div class="tlbar" id="fuelline"></div>
+        <div class="tlx" id="fuelx"></div>
+        <div class="sched" id="sched"></div>
+
+        <div id="fuelwarn" style="margin-top:13px"></div>
+
+        <div class="note">Fuelling is driven by <b>time</b>, not distance — the calculator derives duration from distance and pace, then divides. All of this counts inside the day's carbohydrate target, not on top of it.</div>
+      </div>
+
+      <div class="seclab">the two rules that matter on the day</div>
+      <div class="card">
+        <div class="ok"><b>Start fuelling at 20 minutes</b>, not when you feel like it. By the time you feel you need a gel, you needed it twenty minutes ago. Set a watch alarm.</div>
+        <div class="ok" style="margin-bottom:0"><b>Take water with every gel</b> — 150 to 250 ml. Concentrated carbohydrate without fluid slows gastric emptying and is a common cause of gel nausea.</div>
+        <div class="note">Fluid overall: 400–800 ml/h, drink to thirst. Sodium 0.5–0.7 g per litre. Drinking to thirst is well evidenced and the risk runs toward over-drinking, not under.</div>
+      </div>
+
+    </section>
+
+    <section class="page" id="p-diet"></section>
+    <section class="page" id="p-body"></section>
+    <section class="page" id="p-goals"></section>
+
+  </main>
+</div>
+</div>
+<nav id="nav"></nav>
+
+<script>
+'use strict';
+var APP_VER='3.0.0-step1';
+
+/* ─────────────────────────── tabs ─────────────────────────── */
+/* id, eyebrow, title, icon path, which step connects it */
+var TABS=[
+ ['hub','hub','Today','M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z','step 6'],
+ ['summary','overview','Summary','M8 2v3M16 2v3M3 8h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z','step 9'],
+ ['training','plan','Training','M2 12h3M19 12h3M6 8v8M18 8v8M6 12h12','step 9'],
+ ['running','coach','Running','M13 4a2 2 0 1 0 0-.1M7 21l3-6 2-3 1 4 3 3M6 12l3-3 3 1 2-2','live'],
+ ['diet','nutrition','Diet','M12 3a7 7 0 0 0-7 7c0 4 3 8 7 11 4-3 7-7 7-11a7 7 0 0 0-7-7M12 7v6','step 8'],
+ ['body','progress','Body','M4 5h16v14H4zM4 15l4-4 3 3 4-4 5 5','step 9'],
+ ['goals','targets','Goals','M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9M12 11.9h.01','step 9']
+];
+var DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* Race constants. Mirrors D1 `settings`; replaced by a live read in step 4. */
+var RACE={date:'2026-08-22',label:'Solo 42.195 km',km:42.195,targetMin:240,gPerHour:65,gelCarbs:23.5};
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function mmss(v){var m=Math.floor(v),s=Math.round((v-m)*60);if(s===60){m++;s=0;}return m+':'+String(s).padStart(2,'0');}
+function hm(mins){var h=Math.floor(mins/60),m=Math.round(mins%60);if(m===60){h++;m=0;}return h+':'+String(m).padStart(2,'0');}
+
+/* ─────────────────────────── navigation ─────────────────────────── */
+function buildNav(){
+  var nb='',sb='';
+  TABS.forEach(function(t){
+    var ic='<svg viewBox="0 0 24 24"><path d="'+t[3]+'"/></svg>';
+    var on=t[0]==='running'?' on':'';
+    nb+='<button data-t="'+t[0]+'" class="'+on.trim()+'" onclick="go(\''+t[0]+'\')" aria-label="'+t[2]+'">'+ic+t[2]+'</button>';
+    sb+='<button data-t="'+t[0]+'" class="'+on.trim()+'" onclick="go(\''+t[0]+'\')"><span class="i">'+ic+'</span>'+t[2]+'</button>';
+  });
+  $('nav').innerHTML=nb;$('side').innerHTML=sb;
+}
+function go(id){
+  TABS.forEach(function(t){
+    var p=$('p-'+t[0]); if(p)p.classList.toggle('on',t[0]===id);
+  });
+  document.querySelectorAll('#nav button,#side button').forEach(function(b){
+    b.classList.toggle('on',b.dataset.t===id);
+  });
+  var t=TABS.find(function(x){return x[0]===id;});
+  if(t){$('eyebrow').textContent=t[1];$('title').textContent=t[2];}
+  window.scrollTo(0,0);
+}
+
+/* ─────────────────────────── stubs ─────────────────────────── */
+/* Honest placeholders. Each names the step that connects it, so an empty tab
+   never reads as a bug. */
+function buildStubs(){
+  TABS.forEach(function(t){
+    if(t[0]==='running')return;
+    $('p-'+t[0]).innerHTML=
+      '<div class="stub"><b>'+esc(t[2])+' is not connected yet</b>'+
+      'This tab arrives in <span class="num">'+esc(t[4])+'</span> of the Stage 4 build.<br>'+
+      'Nothing is broken — there is simply no read API behind it yet.</div>';
+  });
+}
+
+/* ─────────────────────────── week rail ─────────────────────────── */
+/* Computed from the device clock only. No data source, so no session names. */
+function buildRail(){
+  var now=new Date(), dow=now.getDay();
+  var monOffset=(dow===0?-6:1-dow);          // week starts Monday
+  var html='';
+  for(var i=0;i<7;i++){
+    var d=new Date(now); d.setDate(now.getDate()+monOffset+i);
+    var isToday=d.toDateString()===now.toDateString();
+    var isPast=d<now&&!isToday;
+    html+='<div class="rd'+(isToday?' today':'')+(isPast?' past':'')+'">'+
+          '<span class="rl">'+DAYS[d.getDay()].toUpperCase()+'</span>'+
+          '<span class="rs">'+d.getDate()+'</span></div>';
+  }
+  $('rail').innerHTML=html;
+  var days=daysToRace();
+  $('railnote').textContent=days>0
+    ? days+' day'+(days===1?'':'s')+' to the 42 km · sessions appear once the plan is connected in step 3'
+    : 'sessions appear once the plan is connected in step 3';
+}
+function daysToRace(){
+  var now=new Date(); now.setHours(0,0,0,0);
+  var r=new Date(RACE.date+'T00:00:00');
+  return Math.round((r-now)/86400000);
+}
+
+/* ─────────────────────────── refuel calculator ─────────────────────────── */
+/* Sodium is deliberately blank, not zero. The Coles gel sodium content is
+   unverified — showing 0 would assert something we do not know. */
+var PRODUCTS=[
+  {n:'Coles Perform Elite',            c:23.5,k:0,  na:null},
+  {n:'Coles Perform Elite Cola (caffeine)', c:23.5,k:50, na:null},
+  {n:'Custom',                          c:25,  k:0,  na:null}
+];
+
+function fillProducts(){
+  $('fp').innerHTML=PRODUCTS.map(function(p,i){
+    return '<option value="'+i+'">'+esc(p.n)+'</option>';
+  }).join('');
+}
+function pickProd(){
+  var p=PRODUCTS[+$('fp').value];
+  $('fc').value=p.c; $('fk').value=p.k;
+  $('fn').value=p.na==null?'':p.na;
+  fuel();
+}
+
+function fuel(){
+  var km   = parseFloat($('skm').value);
+  var pace = parseFloat($('space').value);          // minutes per km
+  var rate = parseFloat($('srate').value);          // g per hour
+  var wt   = parseFloat($('swt').value);
+  var carb = parseFloat($('fc').value)||0;
+  var caf  = parseFloat($('fk').value)||0;
+  var naRaw= $('fn').value.trim();
+  var na   = naRaw===''?null:(parseFloat(naRaw)||0);
+
+  $('okm').textContent   = km.toFixed(1)+' km';
+  $('opace').textContent = mmss(pace)+'/km';
+  $('orate').textContent = rate+' g/h';
+  $('owt').textContent   = wt+' kg';
+
+  var durMin = km*pace;
+  var hours  = durMin/60;
+
+  // How many serves the target rate implies over the whole run...
+  var n = carb>0 ? Math.max(0, Math.round(rate*hours/carb)) : 0;
+  // ...then spread them evenly, leaving a gap at each end. Dividing by n+1
+  // rather than n avoids scheduling a gel in the last minute of the run,
+  // which would contribute nothing — absorption takes longer than that.
+  var interval = n>0 ? durMin/(n+1) : 0;
+  var marks=[];
+  for(var k=1; k<=n; k++) marks.push(k*interval);
+  var totalCarb = n*carb;
+  var totalCaf  = n*caf;
+  var totalNa   = na==null?null:n*na;
+
+  $('vdur').textContent = hm(durMin);
+  $('vint').textContent = interval?Math.round(interval)+'m':'—';
+  $('vn').textContent   = n;
+  $('vc').textContent   = Math.round(totalCarb);
+  $('vcsub').textContent= hours>0?(totalCarb/hours).toFixed(0)+' g/h actual':'';
+
+  // ── timeline ──
+  var bar='',x='';
+  marks.forEach(function(t){
+    var pct=(t/durMin)*100;
+    bar+='<i class="'+(caf>0?'caf':'')+'" style="left:'+pct.toFixed(2)+'%"></i>';
+  });
+  $('fuelline').innerHTML=bar;
+  $('fuelx').innerHTML='<span>0:00</span><span>'+hm(durMin/2)+'</span><span>'+hm(durMin)+'</span>';
+
+  $('sched').innerHTML=marks.map(function(t){
+    return '<span class="'+(caf>0?'caf':'')+'">'+hm(t)+'</span>';
+  }).join('');
+
+  // ── band description ──
+  var band;
+  if(rate<45)      band='Below the floor for an effort of this length.';
+  else if(rate<=70)band='One progression step from where you are. Achievable without gut training.';
+  else if(rate<=90)band='Requires a gut trained over 6–12 weeks. You have days, not weeks.';
+  else             band='Well beyond an untrained gut. High risk of GI failure.';
+  $('oband').textContent=band;
+
+  // ── warnings ──
+  var w=[];
+
+  if(rate>70){
+    w.push(['warn','<b>'+rate+' g/h is above what an untrained gut absorbs.</b> Adaptation takes 6–12 weeks of progressive intake; two weeks is the floor for any measurable change. Attempting to build tolerance inside a taper is ineffective and raises the risk of GI problems on the day.']);
+  }
+  if(rate<50 && durMin>150){
+    w.push(['warn','<b>Under-fuelled for '+hm(durMin)+'.</b> The cost of this shows up at 32–35 km — which is where a first 42 km is decided.']);
+  }
+
+  if(totalCaf>0){
+    var mgkg=totalCaf/wt;
+    var lo=3*wt, hi=6*wt;
+    if(totalCaf>hi){
+      w.push(['warn','<b>'+Math.round(totalCaf)+' mg caffeine is above the common 3–6 mg/kg range</b> ('+Math.round(lo)+'–'+Math.round(hi)+' mg at '+wt+' kg), and as a continuous drip rather than a single dose. Mix caffeinated and plain gels — caffeinated for the first hour and the 30–35 km stretch. Target 200–300 mg.']);
+    } else {
+      w.push(['ok',Math.round(totalCaf)+' mg caffeine total · '+mgkg.toFixed(1)+' mg/kg — inside the usual 3–6 mg/kg range.']);
+    }
+  }
+
+  if(na==null){
+    w.push(['info','<b>Sodium unverified.</b> The sodium content of these gels has never been confirmed off the packet. Rather than assume, either read the label or carry an electrolyte tablet so the total is known. Target 0.5–0.7 g per litre of fluid.']);
+  } else if(totalNa!=null){
+    var litresLo=0.4*hours, litresHi=0.8*hours;
+    w.push(['info','Sodium from gels: '+Math.round(totalNa)+' mg. Against '+litresLo.toFixed(1)+'–'+litresHi.toFixed(1)+' L of fluid you want roughly '+Math.round(500*litresLo)+'–'+Math.round(700*litresHi)+' mg total.']);
+  }
+
+  w.push(['info','Fluid: '+ (0.4*hours).toFixed(1)+'–'+(0.8*hours).toFixed(1)+' L over '+hm(durMin)+', drunk to thirst rather than to schedule.']);
+
+  $('fuelwarn').innerHTML=w.map(function(p){
+    return '<div class="'+p[0]+'">'+p[1]+'</div>';
+  }).join('');
+}
+
+/* ─────────────────────────── boot ─────────────────────────── */
+function boot(){
+  buildNav();
+  buildStubs();
+  buildRail();
+  fillProducts();
+
+  $('racename').textContent=RACE.label;
+  var d=new Date(RACE.date+'T12:00:00');
+  $('racedate').textContent=d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  var days=daysToRace();
+  $('racecount').textContent=days>0?days+' days':(days===0?'today':'done');
+  $('syncline').textContent='Step 1 · calculator runs offline, no database connected';
+
+  ['skm','space','srate','swt'].forEach(function(id){
+    $(id).addEventListener('input',fuel);
+  });
+  ['fc','fk','fn'].forEach(function(id){
+    $(id).addEventListener('input',fuel);
+  });
+  $('fp').addEventListener('change',pickProd);
+
+  go('running');
+  fuel();
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){/* offline support is optional */});
+  });
+}
+document.addEventListener('DOMContentLoaded',boot);
+</script>
+</body>
+</html>
