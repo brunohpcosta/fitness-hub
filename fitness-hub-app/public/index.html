@@ -117,6 +117,50 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .stub{border:1px dashed var(--line2);border-radius:var(--rc);padding:26px 18px;text-align:center;color:var(--t3);font-size:13px;line-height:1.7}
 .stub b{display:block;color:var(--t2);font-weight:500;font-size:14px;margin-bottom:5px}
 
+.w{background:var(--s1);border:1px solid var(--line);border-radius:var(--rc);padding:13px 14px;display:flex;flex-direction:column;min-height:92px}
+.w .wt{font-size:11px;font-weight:500;color:var(--t2);margin-bottom:auto}
+.w .wv{font-size:25px;font-weight:600;letter-spacing:-.035em;line-height:1;margin-top:10px}
+.w .wv small{font-size:12px;font-weight:500;color:var(--t2);letter-spacing:0;margin-left:3px}
+.w .ws{font-size:11px;color:var(--t3);margin-top:5px}
+.w .wv.none{color:var(--t3);font-size:19px}
+
+.bar{height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.mrow{margin-bottom:11px}
+.mrow:last-child{margin-bottom:0}
+.mrow .mh{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.mrow .mh b{font-weight:400;color:var(--t2)}
+
+.exc{border-bottom:1px solid var(--line);padding:11px 0}
+.exc:last-child{border-bottom:none}
+.exc .eh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.exc .en{font-size:14px;font-weight:500}
+.exc .eset{font-size:12px;color:var(--t2);white-space:nowrap;font-family:var(--mono)}
+.exc .enote{font-size:11.5px;color:var(--t3);margin-top:4px}
+
+#sheet{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.66);backdrop-filter:blur(7px)}
+#sheet.open{display:flex}
+#sheetcard{background:var(--s1);border:1px solid var(--line);border-radius:var(--rc);padding:17px 18px;width:100%;max-width:420px;max-height:86vh;overflow-y:auto}
+#gear{background:none;border:none;padding:6px;margin:2px -6px 0 8px;color:var(--t2);flex:none}
+#gear svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.dot.ok{background:var(--green)} .dot.warn{background:var(--amber)} .dot.bad{background:var(--accent)}
+
+.rblock{padding:10px 0;border-bottom:1px solid var(--line)}
+.rblock:last-of-type{border-bottom:none}
+.rlab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.rlab .rn{font-size:14px}
+.rlab .rv{font-size:12px;color:var(--t3)}
+.rlab .rv.set{color:var(--accent)}
+.rate{display:flex;gap:5px}
+.rate button{flex:1;padding:10px 0;border:1px solid var(--line);border-radius:8px;font-size:14px;color:var(--t2);font-family:var(--mono)}
+.rate button.on{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.hint{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-top:5px}
+.fieldrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.fieldrow label{font-size:14px;flex:none;width:120px}
+.fieldrow input{text-align:right}
+.morebtn{width:100%;text-align:center;font-size:13px;color:var(--t2);padding:11px 0;border-top:1px solid var(--line);margin-top:4px}
+.queued{font-size:11px;color:var(--amber);margin-top:8px}
+
 #nav{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;background:rgba(10,10,12,.92);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 #nav button{flex:1;padding:8px 1px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:8.5px;color:var(--t3);min-width:0}
 #nav button.on{color:var(--accent)}
@@ -147,7 +191,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         <h1 id="title">Running</h1>
         <div class="sync"><span class="dot"></span><span id="syncline">No data connected</span></div>
       </div>
-      <div class="protobadge">step 1 · calculator only</div>
+      <button id="gear" onclick="openSheet()" aria-label="Connection settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
     </div>
   </div>
   <div class="wrap"><div id="rail"></div><div id="railnote"></div></div>
@@ -157,7 +203,24 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
   <nav id="side"></nav>
   <main id="main">
 
-    <section class="page" id="p-hub"></section>
+    <!-- HUB — the 5am screen -->
+    <section class="page" id="p-hub">
+      <div id="hubstate"></div>
+      <div class="grid g2 wide" id="widgets" style="margin-bottom:11px"></div>
+      <div class="cols">
+        <div>
+          <div class="seclab">today's session</div>
+          <div class="card" id="hubsession"></div>
+        </div>
+        <div>
+          <div class="seclab">intake vs target</div>
+          <div class="card" id="hubmacros"></div>
+        </div>
+      </div>
+      <div class="seclab">daily check-in</div>
+      <div class="card" id="hublog"></div>
+    </section>
+
     <section class="page" id="p-summary"></section>
     <section class="page" id="p-training"></section>
 
@@ -243,6 +306,20 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 </div>
 <nav id="nav"></nav>
 
+<!-- settings sheet — API address and key live here, in localStorage -->
+<div id="sheet">
+  <div id="sheetcard">
+    <div class="ch"><span class="ct">Connection</span><button class="btn sm" onclick="closeSheet()">Close</button></div>
+    <label class="fl" for="cfg-url">API base URL — the Worker, not this app</label>
+    <input type="text" id="cfg-url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://fitness-hub-api.bruno-hpc93.workers.dev" style="margin-bottom:11px">
+    <label class="fl" for="cfg-key">Key</label>
+    <input type="text" id="cfg-key" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="paste the shared secret" style="margin-bottom:14px">
+    <button class="btn pri f" onclick="saveCfg()">Save and reload data</button>
+    <div class="note">Stored only on this device, in this browser. Sent as a bearer token over HTTPS. Clearing Safari data removes it.</div>
+    <div id="cfgstate" style="margin-top:11px"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
 var APP_VER='3.0.0-step1';
@@ -267,6 +344,172 @@ function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function mmss(v){var m=Math.floor(v),s=Math.round((v-m)*60);if(s===60){m++;s=0;}return m+':'+String(s).padStart(2,'0');}
 function hm(mins){var h=Math.floor(mins/60),m=Math.round(mins%60);if(m===60){h++;m=0;}return h+':'+String(m).padStart(2,'0');}
+
+/* ─────────────────────────── config and data ─────────────────────────── */
+/* The API address and key live in localStorage on this device. Nothing is
+   bundled into the deployed files, so the key never appears in the repo. */
+var CFG={url:'',key:''};
+var DATA=null;          // last /api/today payload
+var DATA_AT=null;       // when it was fetched
+var DATA_STALE=false;   // true when showing cache because the network failed
+
+function loadCfg(){
+  try{
+    CFG.url=localStorage.getItem('fh_url')||'';
+    CFG.key=localStorage.getItem('fh_key')||'';
+  }catch(e){}
+}
+function saveCfg(){
+  var u=$('cfg-url').value.trim().replace(/\/+$/,'');
+  var k=$('cfg-key').value.trim();
+  try{localStorage.setItem('fh_url',u);localStorage.setItem('fh_key',k);}catch(e){}
+  CFG.url=u;CFG.key=k;
+  $('cfgstate').innerHTML='<div class="info">Saved. Testing…</div>';
+  diagnose().then(function(res){
+    $('cfgstate').innerHTML='<div class="'+(res.ok?'ok':'warn')+'">'+esc(res.msg)+'</div>'+
+      '<div class="note">Origin sent by this page: <span class="num">'+esc(location.origin)+'</span></div>';
+    if(res.ok)refresh();
+  });
+}
+var DEFAULT_API='https://fitness-hub-api.bruno-hpc93.workers.dev';
+function openSheet(){
+  // Prefill rather than rely on a placeholder — the API address is not
+  // something worth making anyone remember or retype at 5am.
+  $('cfg-url').value=CFG.url||DEFAULT_API;
+  $('cfg-key').value=CFG.key;
+  $('cfgstate').innerHTML='';
+  $('sheet').classList.add('open');
+}
+function closeSheet(){$('sheet').classList.remove('open');}
+
+/* Cache the last good payload so the app opens with something on no signal.
+   Marked stale on display — old data shown as current would be worse than none. */
+function cacheGet(){
+  try{
+    var raw=localStorage.getItem('fh_today');
+    if(!raw)return null;
+    var o=JSON.parse(raw);
+    return (o&&o.payload)?o:null;
+  }catch(e){return null;}
+}
+function cachePut(payload){
+  try{localStorage.setItem('fh_today',JSON.stringify({at:Date.now(),payload:payload}));}catch(e){}
+}
+
+function api(path){
+  if(!CFG.url||!CFG.key)return Promise.reject(new Error('not configured'));
+  var ctl=new AbortController();
+  var timer=setTimeout(function(){ctl.abort();},12000);
+  return fetch(CFG.url+path,{
+    headers:{'Authorization':'Bearer '+CFG.key},
+    signal:ctl.signal,
+    cache:'no-store'
+  }).then(function(r){
+    clearTimeout(timer);
+    if(r.status===401){var e=new Error('unauthorised');e.status=401;throw e;}
+    if(!r.ok){var e2=new Error('http '+r.status);e2.status=r.status;throw e2;}
+    return r.json();
+  }).catch(function(err){
+    clearTimeout(timer);
+    // A browser reports a blocked cross-origin request and a dead network
+    // identically, as a bare TypeError with no detail. Say that plainly
+    // rather than blaming the key.
+    if(err.name==='AbortError'){var t=new Error('timed out after 12s');t.kind='timeout';throw t;}
+    if(err.status)throw err;
+    var n=new Error('could not reach the server');n.kind='network';throw n;
+  });
+}
+
+/**
+ * Two-stage check, so a failure says which half broke.
+ *   /health needs no auth — if that fails the problem is the address, CORS,
+ *   or the network. If it succeeds but /api/today 401s, the key is wrong.
+ *   If /api/today 404s, the Worker is deployed but without the read API.
+ */
+function diagnose(){
+  var url=CFG.url;
+  if(!/^https?:\/\//.test(url))
+    return Promise.resolve({ok:false,msg:'The URL must start with https://'});
+
+  // The commonest mistake, and one this app can catch outright: pointing the
+  // API field at the app itself. They are two different Cloudflare products
+  // on two different hostnames.
+  if(url.replace(/\/+$/,'')===location.origin){
+    return Promise.resolve({ok:false,msg:
+      'That is this app’s own address, not the API. The API is the Worker — try https://fitness-hub-api.bruno-hpc93.workers.dev'});
+  }
+
+  return fetch(url+'/health',{cache:'no-store'}).then(function(r){
+    if(!r.ok)return {ok:false,msg:'The server answered /health with HTTP '+r.status+'. That address may not be the Worker.'};
+    // A wrong host can still return 200 — a static site will happily serve a
+    // page for /health. Confirm it is actually the Worker before going on.
+    return r.json().then(function(j){
+      if(!j||j.service!=='fitness-hub-api')
+        throw new Error('not the worker');
+      return true;
+    }).catch(function(){
+      throw new Error('not the worker');
+    });
+  }).then(function(){
+    return api('/api/today').then(function(){
+      return {ok:true,msg:'Connected.'};
+    }).catch(function(e){
+      if(e.status===401)
+        return {ok:false,msg:'The address is right and the server is up, but the key was rejected. Check for a missing or extra character.'};
+      if(e.status===404)
+        return {ok:false,msg:'The Worker is running but has no /api/today route — the read API has not been deployed yet. Run npx wrangler deploy in fitness-hub-api.'};
+      if(e.kind==='timeout')
+        return {ok:false,msg:'The server accepted /health but /api/today timed out.'};
+      return {ok:false,msg:'Reached the server, but /api/today failed: '+e.message};
+    });
+  }).catch(function(e){
+    if(e&&e.message==='not the worker'){
+      return {ok:false,msg:
+        'Something answered at that address, but it is not the Fitness Hub API. Check the hostname — the Worker is https://fitness-hub-api.bruno-hpc93.workers.dev'};
+    }
+    return {ok:false,msg:'Could not reach '+url+'/health at all. Either the address is wrong, the phone has no connection, or the browser blocked the request because this page origin is not on the Worker allowlist.'};
+  });
+}
+
+function refresh(){
+  if(!CFG.url||!CFG.key){
+    DATA=null;renderAll();return Promise.resolve();
+  }
+  setSync('Loading…','warn');
+  return Promise.all([
+    api('/api/today'),
+    // The rail needs a week of plan rows. Failing this must not lose the Hub,
+    // so it resolves to null rather than rejecting the pair.
+    api('/api/plan?from='+isoOf(new Date(Date.now()-7*86400000))+'&to=2026-08-22')
+      .then(function(p){return p;}).catch(function(){return null;})
+  ]).then(function(both){
+    var j=both[0];
+    DATA=j;DATA_AT=Date.now();DATA_STALE=false;
+    if(both[1]&&both[1].sessions)PLAN=both[1].sessions;
+    cachePut({today:j,plan:PLAN});
+    renderAll();
+    // We are demonstrably online — send anything that queued while we were not.
+    if(outboxGet().length) flushOutbox().then(function(n){ if(n)refresh(); });
+  }).catch(function(err){
+    var c=cacheGet();
+    if(c&&c.payload&&c.payload.today){
+      DATA=c.payload.today;
+      PLAN=c.payload.plan||null;
+      DATA_AT=c.at;
+      DATA_STALE=true;
+    }else{
+      DATA=null;
+    }
+    renderAll(err);
+  });
+}
+
+function setSync(msg,tone){
+  var el=$('syncline');if(!el)return;
+  el.textContent=msg;
+  var d=document.querySelector('#top .dot');
+  if(d)d.className='dot '+(tone||'');
+}
 
 /* ─────────────────────────── navigation ─────────────────────────── */
 function buildNav(){
@@ -296,7 +539,7 @@ function go(id){
    never reads as a bug. */
 function buildStubs(){
   TABS.forEach(function(t){
-    if(t[0]==='running')return;
+    if(t[0]==='running'||t[0]==='hub')return;
     $('p-'+t[0]).innerHTML=
       '<div class="stub"><b>'+esc(t[2])+' is not connected yet</b>'+
       'This tab arrives in <span class="num">'+esc(t[4])+'</span> of the Stage 4 build.<br>'+
@@ -304,25 +547,377 @@ function buildStubs(){
   });
 }
 
+/* ─────────────────────────── hub ─────────────────────────── */
+function n1(v){return (v==null||isNaN(v))?null:Math.round(v*10)/10;}
+function n0(v){return (v==null||isNaN(v))?null:Math.round(v);}
+
+/* A missing value renders as an em dash with its reason, never as zero. */
+function widget(label,value,unit,sub){
+  var v = value==null
+    ? '<div class="wv none">—</div>'
+    : '<div class="wv">'+esc(value)+(unit?'<small>'+esc(unit)+'</small>':'')+'</div>';
+  return '<div class="w"><div class="wt">'+esc(label)+'</div>'+v+
+         '<div class="ws">'+esc(sub||'')+'</div></div>';
+}
+
+function renderAll(err){
+  renderHubState(err);
+  renderWidgets();
+  renderSession();
+  renderMacros();
+  renderLog();
+  renderRail();
+}
+
+function renderHubState(err){
+  var el=$('hubstate');
+  if(!CFG.url||!CFG.key){
+    el.innerHTML='<div class="info">Not connected. Open the settings icon, top right, and enter your API address and key.</div>';
+    setSync('Not connected','warn');
+    return;
+  }
+  if(!DATA){
+    var msg = err&&err.message==='unauthorised'
+      ? 'The key was rejected. Check it in settings.'
+      : 'Could not reach the API and there is no cached copy yet.';
+    el.innerHTML='<div class="warn">'+esc(msg)+'</div>';
+    setSync('Offline, no data','bad');
+    return;
+  }
+  if(DATA_STALE){
+    var mins=Math.round((Date.now()-(DATA_AT||Date.now()))/60000);
+    el.innerHTML='<div class="warn"><b>Showing cached data</b> from '+
+      (mins<60?(mins+' minutes'):(Math.round(mins/60)+' hours'))+
+      ' ago. The API could not be reached, so these numbers may have moved.</div>';
+    setSync('Cached · offline','warn');
+    return;
+  }
+  el.innerHTML='';
+  var f=DATA.freshness||{};
+  if(f.status==='alert'||f.status==='warn'){
+    el.innerHTML='<div class="warn">Phone last synced '+
+      (f.hours_since!=null?Math.round(f.hours_since)+' hours ago':'a while ago')+
+      '. Health Auto Export cannot sync while the phone is locked.</div>';
+  }
+  setSync('Synced · data to '+esc(DATA.date),f.status==='ok'?'ok':'warn');
+}
+
+function renderWidgets(){
+  if(!DATA){$('widgets').innerHTML='';return;}
+  var a=DATA.actual||{};
+  var race=DATA.race||{};
+
+  // Weight: prefer today's reading, say which device it came from.
+  var wt=n1(a.weight_kg);
+  var wtSub=a.weight_source?('via '+a.weight_source):'no reading today';
+
+  var steps=n0(a.steps);
+  var runKm=n1(a.run_km);
+  var rhr=n0(a.resting_hr);
+
+  $('widgets').innerHTML=
+    widget('Weight', wt, ' kg', wtSub)+
+    widget('Steps', steps==null?null:steps.toLocaleString(), '', steps==null?'not synced yet':'') +
+    widget('Run today', runKm, ' km', runKm==null?'nothing logged':'') +
+    widget(race.days_to!=null?'To race day':'Resting HR',
+           race.days_to!=null?race.days_to:rhr,
+           race.days_to!=null?(race.days_to===1?' day':' days'):' bpm',
+           race.days_to!=null?esc(race.label||''):'');
+}
+
+function renderSession(){
+  var el=$('hubsession');
+  if(!DATA){el.innerHTML='<div class="note">No data.</div>';return;}
+  var p=DATA.plan, ahead=false;
+
+  // Nothing planned today — show the next session rather than an empty card.
+  // Clearly labelled as upcoming, so it is never mistaken for today's work.
+  if(!p&&PLAN&&PLAN.length){
+    for(var i=0;i<PLAN.length;i++){
+      if(PLAN[i].local_date>DATA.date){p=PLAN[i];ahead=true;break;}
+    }
+  }
+  if(!p){
+    el.innerHTML='<div class="ch"><span class="ct">No session planned</span></div>'+
+      '<div class="note">There is no plan row for '+esc(DATA.date)+
+      ', and none after it. The plan covers 13 to 22 August.</div>';
+    return;
+  }
+
+  var when='';
+  if(ahead){
+    var d=new Date(p.local_date+'T12:00:00');
+    when=DAYS[d.getDay()]+' '+d.getDate()+' '+
+         ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  }
+  var h='<div class="ch"><span class="ct">'+esc(p.day_label)+'</span>'+
+        '<span class="cm num">'+esc(ahead?('next · '+when):p.session_type)+'</span></div>';
+  if(ahead){
+    h+='<div class="info">Nothing scheduled for today. This is your next session.</div>';
+  }
+
+  if(p.run_km_min!=null){
+    var km = (p.run_km_max&&p.run_km_max!==p.run_km_min)
+      ? (p.run_km_min+'–'+p.run_km_max+' km')
+      : (p.run_km_min+' km');
+    h+='<div class="tile" style="margin-bottom:9px"><div class="tl">Run</div>'+
+       '<div class="tv num">'+esc(km)+'</div>'+
+       (p.run_pace_note?'<div class="tsub">'+esc(p.run_pace_note)+'</div>':'')+'</div>';
+    if(p.run_hr_note)h+='<div class="note" style="margin-top:0">'+esc(p.run_hr_note)+'</div>';
+  }
+  if(p.gym_note)h+='<div class="info">'+esc(p.gym_note)+'</div>';
+
+  if(p.exercises&&p.exercises.length){
+    h+='<div style="margin-top:11px">';
+    p.exercises.forEach(function(e){
+      h+='<div class="exc"><div class="eh"><span class="en">'+esc(e.exercise)+'</span>'+
+         '<span class="eset">'+esc(e.sets_reps)+'</span></div>'+
+         (e.note?'<div class="enote">'+esc(e.note)+'</div>':'')+'</div>';
+    });
+    h+='</div>';
+  }
+  if(p.fuel_note)h+='<div class="ok" style="margin-top:11px">'+esc(p.fuel_note)+'</div>';
+  if(p.why)h+='<div class="note">'+esc(p.why)+'</div>';
+  el.innerHTML=h;
+}
+
+/* ─────────────────────────── check-in ─────────────────────────── */
+/* Every rating in the schema runs 1 = bad, 5 = good — including soreness,
+   fatigue and stress, where that is the opposite of what most apps do. The
+   end labels below exist so the scale is never ambiguous at 5am. */
+var RATINGS=[
+  ['sleep_quality','Sleep quality','Poor','Excellent',1],
+  ['fatigue','Fatigue','Exhausted','Fresh',1],
+  ['soreness','Soreness','Very sore','None',1],
+  ['session_effort','Session effort','Poor','Excellent',0],
+  ['performance','Performance','Poor','Excellent',0],
+  ['strength_feel','Strength feel','Weak','Strong',0],
+  ['stress','Stress','Very high','Calm',0],
+  ['session_enjoyment','Enjoyment','Low','High',0],
+  ['hunger','Hunger','Ravenous','Settled',0],
+  ['cravings','Cravings','Strong','None',0]
+];
+var R={};              // pending ratings
+var MORE=false;        // extra fields expanded
+var LOGDATE=null;
+
+function setR(k,v){ R[k]=(R[k]===v?null:v); renderLog(); }
+function toggleMore(){ MORE=!MORE; renderLog(); }
+
+function ratingBlock(k,label,lo,hi){
+  var cur=R[k];
+  var btns='';
+  for(var i=1;i<=5;i++){
+    btns+='<button class="'+(cur===i?'on':'')+'" onclick="setR(\''+k+'\','+i+')">'+i+'</button>';
+  }
+  return '<div class="rblock"><div class="rlab"><span class="rn">'+esc(label)+'</span>'+
+         '<span class="rv'+(cur?' set':'')+'">'+(cur?cur+' of 5':'not set')+'</span></div>'+
+         '<div class="rate">'+btns+'</div>'+
+         '<div class="hint"><span>1 · '+esc(lo)+'</span><span>'+esc(hi)+' · 5</span></div></div>';
+}
+
+function renderLog(){
+  var el=$('hublog');
+  if(!DATA){el.innerHTML='<div class="note">Connect to log.</div>';return;}
+  LOGDATE=DATA.date;
+
+  var existing=(DATA.actual)||{};
+  var h='<div class="ch"><span class="ct">'+esc(LOGDATE)+'</span>'+
+        '<span class="cm num" id="logstate"></span></div>';
+
+  h+='<div class="fieldrow"><label for="lg-wt">Weight kg</label>'+
+     '<input type="number" id="lg-wt" inputmode="decimal" step="0.1" min="40" max="200" placeholder="'+
+     (existing.weight_kg!=null?(Math.round(existing.weight_kg*10)/10):'—')+'"></div>';
+
+  h+='<div class="fieldrow"><label for="lg-sleep">Hours slept</label>'+
+     '<input type="number" id="lg-sleep" inputmode="decimal" step="0.25" min="0" max="16" placeholder="'+
+     (existing.hours_slept!=null?existing.hours_slept:'—')+'"></div>';
+
+  RATINGS.forEach(function(r){
+    if(!r[4]&&!MORE)return;
+    h+=ratingBlock(r[0],r[1],r[2],r[3]);
+  });
+
+  if(MORE){
+    h+='<div class="rblock"><div class="rlab"><span class="rn">Session or fuelling notes</span></div>'+
+       '<input type="text" id="lg-cardio" placeholder="e.g. 65 g/h held, no GI issues at 90 min"></div>';
+    h+='<div class="rblock"><div class="rlab"><span class="rn">Notes</span></div>'+
+       '<input type="text" id="lg-notes" placeholder="anything else"></div>';
+  }
+
+  h+='<button class="morebtn" onclick="toggleMore()">'+(MORE?'Fewer fields':'More fields')+'</button>';
+  h+='<button class="btn pri f" style="margin-top:9px" onclick="saveLog()">Save check-in</button>';
+  h+='<div id="logmsg"></div>';
+
+  // Anything already stored for the day, so a partial save is visible.
+  var done=[];
+  ['hours_slept','sleep_quality','fatigue','soreness','performance','strength_feel'].forEach(function(k){
+    if(existing[k]!=null)done.push(k.replace(/_/g,' '));
+  });
+  if(done.length)h+='<div class="note">Already recorded for this day: '+esc(done.join(', '))+
+    '. Leaving a field blank keeps what is there — it does not clear it.</div>';
+
+  el.innerHTML=h;
+  renderOutboxState();
+}
+
+/* Offline outbox. A save at 5am on bad reception queues rather than failing,
+   and is flushed on the next successful connection. */
+function outboxGet(){
+  try{return JSON.parse(localStorage.getItem('fh_outbox')||'[]');}catch(e){return [];}
+}
+function outboxPut(q){
+  try{localStorage.setItem('fh_outbox',JSON.stringify(q));}catch(e){}
+}
+function renderOutboxState(){
+  var q=outboxGet();
+  var el=$('logstate');
+  if(el)el.textContent=q.length?(q.length+' queued'):'';
+}
+
+function postLog(payload){
+  return fetch(CFG.url+'/api/log',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+CFG.key,'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  }).then(function(r){
+    return r.json().then(function(j){
+      if(!r.ok){var e=new Error(j.error||('http '+r.status));e.details=j.details;e.status=r.status;throw e;}
+      return j;
+    });
+  });
+}
+
+function flushOutbox(){
+  var q=outboxGet();
+  if(!q.length||!CFG.url||!CFG.key)return Promise.resolve(0);
+  var sent=0;
+  return q.reduce(function(p,item){
+    return p.then(function(){
+      return postLog(item).then(function(){sent++;});
+    });
+  },Promise.resolve()).then(function(){
+    outboxPut([]);renderOutboxState();return sent;
+  }).catch(function(){
+    // Keep whatever did not go. Never drop a save silently.
+    outboxPut(q.slice(sent));renderOutboxState();return sent;
+  });
+}
+
+function saveLog(){
+  var msg=$('logmsg');
+  var payload={local_date:LOGDATE,ratings:{}};
+
+  var wt=$('lg-wt')?$('lg-wt').value.trim():'';
+  if(wt!=='')payload.weight_kg=parseFloat(wt);
+  var sl=$('lg-sleep')?$('lg-sleep').value.trim():'';
+  if(sl!=='')payload.ratings.hours_slept=parseFloat(sl);
+
+  RATINGS.forEach(function(r){ if(R[r[0]])payload.ratings[r[0]]=R[r[0]]; });
+
+  if($('lg-cardio')&&$('lg-cardio').value.trim())payload.cardio_note=$('lg-cardio').value.trim();
+  if($('lg-notes')&&$('lg-notes').value.trim())payload.notes=$('lg-notes').value.trim();
+
+  var hasSomething = payload.weight_kg!=null || Object.keys(payload.ratings).length ||
+                     payload.notes || payload.cardio_note;
+  if(!hasSomething){
+    msg.innerHTML='<div class="warn">Nothing to save — fill at least one field.</div>';
+    return;
+  }
+
+  msg.innerHTML='<div class="info">Saving…</div>';
+  postLog(payload).then(function(j){
+    R={};
+    var extra=j.weight_note?('<div class="info" style="margin-top:8px">'+esc(j.weight_note)+'</div>'):'';
+    msg.innerHTML='<div class="ok">Saved.</div>'+extra;
+    refresh();
+  }).catch(function(e){
+    if(e.status===400){
+      // The server rejected the values. Queuing would only fail again later.
+      msg.innerHTML='<div class="warn">'+esc(e.message)+
+        (e.details?': '+esc(e.details.join('; ')):'')+'</div>';
+      return;
+    }
+    var q=outboxGet();q.push(payload);outboxPut(q);renderOutboxState();
+    msg.innerHTML='<div class="warn">No connection — saved to this device and queued. '+
+      'It will send next time the app reaches the API.</div>';
+  });
+}
+
+function macroRow(label,have,target,colour){
+  var pct = (target&&have!=null)?Math.min(100,(have/target)*100):0;
+  var right = have==null
+    ? '<b>no intake logged</b>'
+    : '<b>'+n0(have)+' / '+n0(target)+'</b>';
+  return '<div class="mrow"><div class="mh"><span>'+esc(label)+'</span>'+right+'</div>'+
+         '<div class="bar"><i style="width:'+pct.toFixed(1)+'%;background:'+colour+'"></i></div></div>';
+}
+
+function renderMacros(){
+  var el=$('hubmacros');
+  if(!DATA){el.innerHTML='<div class="note">No data.</div>';return;}
+  var t=DATA.targets, i=DATA.intake;
+
+  if(!t){
+    el.innerHTML='<div class="ch"><span class="ct">Macros</span></div>'+
+      '<div class="warn">No targets for '+esc(DATA.date)+'. The current block expires on 22 August by design, so they are reviewed rather than inherited.</div>';
+    return;
+  }
+  var h='<div class="ch"><span class="ct">Macros</span><span class="cm num">'+
+        (i&&i.energy_kcal!=null?n0(i.energy_kcal)+' / ':'')+n0(t.energy_kcal)+' kcal</span></div>';
+
+  h+=macroRow('Energy', i?i.energy_kcal:null, t.energy_kcal, 'var(--amber)');
+  h+=macroRow('Protein', i?i.protein_g:null, t.protein_g, 'var(--accent)');
+  h+=macroRow('Carbs',   i?i.carbs_g:null,   t.carbs_g,   'var(--green)');
+  h+=macroRow('Fat',     i?i.fat_g:null,     t.fat_g,     'var(--blue)');
+
+  if(t.fell_back){
+    h+='<div class="info" style="margin-top:11px">This is the <b>general</b> target for the period, not one set for a '+
+       esc(t.requested_day_type||'')+' day — no '+esc(t.requested_day_type||'')+
+       ' target exists in this window.</div>';
+  }
+  if(t.note)h+='<div class="note">'+esc(t.note)+'</div>';
+  if(!i)h+='<div class="note">No intake logged for this day yet.</div>';
+  el.innerHTML=h;
+}
+
 /* ─────────────────────────── week rail ─────────────────────────── */
-/* Computed from the device clock only. No data source, so no session names. */
-function buildRail(){
+/* Day cells come from the device clock; labels come from the plan when it has
+   loaded. A day with no plan row shows the date and nothing else, rather than
+   borrowing a label from elsewhere. */
+var PLAN=null;
+
+function isoOf(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function renderRail(){
   var now=new Date(), dow=now.getDay();
   var monOffset=(dow===0?-6:1-dow);          // week starts Monday
+  var byDate={};
+  (PLAN||[]).forEach(function(s){byDate[s.local_date]=s;});
+
   var html='';
   for(var i=0;i<7;i++){
     var d=new Date(now); d.setDate(now.getDate()+monOffset+i);
-    var isToday=d.toDateString()===now.toDateString();
+    var key=isoOf(d);
+    var isToday=key===isoOf(now);
     var isPast=d<now&&!isToday;
+    var s=byDate[key];
+    var label = s ? (s.session_type==='race' ? 'RACE'
+                    : s.is_rest ? 'Rest'
+                    : s.day_label) : '';
     html+='<div class="rd'+(isToday?' today':'')+(isPast?' past':'')+'">'+
           '<span class="rl">'+DAYS[d.getDay()].toUpperCase()+'</span>'+
-          '<span class="rs">'+d.getDate()+'</span></div>';
+          '<span class="rs">'+d.getDate()+'</span>'+
+          '<span class="rkm">'+esc(label)+'</span></div>';
   }
   $('rail').innerHTML=html;
+
   var days=daysToRace();
-  $('railnote').textContent=days>0
-    ? days+' day'+(days===1?'':'s')+' to the 42 km · sessions appear once the plan is connected in step 3'
-    : 'sessions appear once the plan is connected in step 3';
+  $('railnote').textContent = days>0
+    ? days+' day'+(days===1?'':'s')+' to the 42 km'
+    : (days===0 ? 'Race day' : '');
 }
 function daysToRace(){
   var now=new Date(); now.setHours(0,0,0,0);
@@ -444,9 +1039,10 @@ function fuel(){
 
 /* ─────────────────────────── boot ─────────────────────────── */
 function boot(){
+  loadCfg();
   buildNav();
   buildStubs();
-  buildRail();
+  renderRail();
   fillProducts();
 
   $('racename').textContent=RACE.label;
@@ -454,7 +1050,6 @@ function boot(){
   $('racedate').textContent=d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
   var days=daysToRace();
   $('racecount').textContent=days>0?days+' days':(days===0?'today':'done');
-  $('syncline').textContent='Step 1 · calculator runs offline, no database connected';
 
   ['skm','space','srate','swt'].forEach(function(id){
     $(id).addEventListener('input',fuel);
@@ -464,8 +1059,14 @@ function boot(){
   });
   $('fp').addEventListener('change',pickProd);
 
-  go('running');
+  go('hub');
   fuel();
+  refresh();
+
+  // Coming back to the app after a while should not show yesterday's numbers.
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden && DATA_AT && Date.now()-DATA_AT > 5*60000) refresh();
+  });
 }
 
 if('serviceWorker' in navigator){

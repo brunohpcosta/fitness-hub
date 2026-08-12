@@ -12,7 +12,7 @@
  *
  * Bump CACHE on every deploy or the old shell is served forever.
  */
-const CACHE = 'fitness-hub-shell-v3.0.0-step1';
+const CACHE = 'fitness-hub-shell-v3.2.0-checkin';
 
 const ASSETS = [
   './',

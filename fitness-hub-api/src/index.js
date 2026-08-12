@@ -462,6 +462,437 @@ async function handleSummary(env) {
   });
 }
 
+// ─────────────────────────── read API ───────────────────────────
+
+/** Only accept a date that looks like one. Anything else falls back. */
+function safeDate(s, fallback) {
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : fallback;
+}
+
+async function settingsMap(env) {
+  const { results } = await env.DB.prepare('SELECT key, value FROM settings').all();
+  return Object.fromEntries(results.map((r) => [r.key, r.value]));
+}
+
+/**
+ * Which nutrition day_type a planned session implies.
+ * Deliberately derived from the plan rather than the day of the week — during
+ * a taper the weekday tells you nothing.
+ */
+function dayTypeForPlan(plan) {
+  if (!plan) return 'default';
+  if (plan.session_type === 'race') return 'race';
+  if (plan.is_rest) return 'rest';
+  const km = plan.run_km_max ?? plan.run_km_min ?? 0;
+  if (km >= 20) return 'long_run';
+  return 'training';
+}
+
+/**
+ * Targets for a date, with an explicit fallback.
+ *
+ * nutrition_targets does not carry every day_type in every window — the
+ * 20–21 Aug carb-load rows are 'default' only — so asking for 'training' on
+ * the 20th finds nothing. Rather than return null and show a blank screen, we
+ * fall back to 'default' and SAY SO in the response. The app can then tell
+ * Bruno he is seeing a general target rather than one set for that day type.
+ *
+ * Returns null when nothing matches at all. That is a real state, not an
+ * error: the current targets expire on 22 August by design, to force a review.
+ */
+async function resolveTargets(env, date, dayType) {
+  const pick = (dt) =>
+    env.DB.prepare(
+      `SELECT * FROM nutrition_targets
+        WHERE day_type = ? AND ? >= effective_from
+          AND (effective_to IS NULL OR ? <= effective_to)
+        ORDER BY effective_from DESC LIMIT 1`
+    ).bind(dt, date, date).first();
+
+  const exact = await pick(dayType);
+  if (exact) return { ...exact, matched_day_type: dayType, fell_back: 0 };
+
+  if (dayType !== 'default') {
+    const fb = await pick('default');
+    if (fb) {
+      return { ...fb, matched_day_type: 'default', fell_back: 1, requested_day_type: dayType };
+    }
+  }
+  return null;
+}
+
+/**
+ * How stale is the pipeline. Uses ingest_batches, which records when the phone
+ * actually delivered — not the newest local_date, which can move because of a
+ * historical import rather than a fresh sync.
+ */
+async function freshnessInfo(env, settings) {
+  const row = await env.DB.prepare(
+    `SELECT MAX(received_at) AS last_sync FROM ingest_batches WHERE status = 'processed'`
+  ).first();
+
+  const warnH = Number(settings.freshness_warn_hours ?? 36);
+  const alertH = Number(settings.freshness_alert_hours ?? 72);
+  const last = row?.last_sync ?? null;
+  if (!last) return { last_sync: null, hours_since: null, status: 'unknown' };
+
+  const hours = (Date.now() - new Date(last.replace(' ', 'T') + 'Z').getTime()) / 3600000;
+  const status = hours > alertH ? 'alert' : hours > warnH ? 'warn' : 'ok';
+  return { last_sync: last, hours_since: Math.round(hours * 10) / 10, status, warn_after_h: warnH, alert_after_h: alertH };
+}
+
+async function planFor(env, date) {
+  const plan = await env.DB.prepare(
+    `SELECT * FROM plan_sessions WHERE local_date = ? AND deleted_at IS NULL`
+  ).bind(date).first();
+  if (!plan) return null;
+
+  const { results: exercises } = await env.DB.prepare(
+    `SELECT ord, exercise, sets_reps, note FROM plan_exercises
+      WHERE local_date = ? AND deleted_at IS NULL ORDER BY ord`
+  ).bind(date).all();
+
+  return { ...plan, exercises };
+}
+
+/**
+ * One round trip for the whole Hub screen.
+ *
+ * Deliberately a single request: at 5am on mobile data one call that returns a
+ * complete screen beats six parallel ones, and it means the screen can never
+ * render half-populated.
+ *
+ * Every section can independently be null. A gap is a gap — the app shows it
+ * as missing rather than as zero.
+ */
+async function handleToday(request, env) {
+  const { searchParams } = new URL(request.url);
+  const today = sydneyDate(new Date());
+  const date = safeDate(searchParams.get('date'), today);
+
+  const settings = await settingsMap(env);
+  const plan = await planFor(env, date);
+  const dayType = dayTypeForPlan(plan);
+
+  // v_daily only produces rows for days that already have data, so today
+  // frequently has none. That is expected, not an error.
+  const actual = await env.DB.prepare(
+    `SELECT * FROM v_daily WHERE local_date = ?`
+  ).bind(date).first();
+
+  const targets = await resolveTargets(env, date, dayType);
+
+  const intake = await env.DB.prepare(
+    `SELECT * FROM v_daily_intake WHERE local_date = ?`
+  ).bind(date).first();
+
+  // 14-day rolling body composition, per device. Never mixed across the
+  // Withings/Zepp boundary — the two disagree by ~9 percentage points.
+  const { results: body } = await env.DB.prepare(
+    `SELECT metric, device, rolling_avg, readings, confidence
+       FROM v_body_composition WHERE local_date <= ?
+        AND local_date > DATE(?, '-3 days')
+      ORDER BY local_date DESC`
+  ).bind(date, date).all();
+
+  const raceDate = settings.race_date ?? null;
+  const daysToRace = raceDate
+    ? Math.round((new Date(raceDate + 'T00:00:00Z') - new Date(date + 'T00:00:00Z')) / 86400000)
+    : null;
+
+  return Response.json({
+    ok: true,
+    date,
+    is_today: date === today,
+    plan,
+    day_type: dayType,
+    actual: actual ?? null,
+    targets,
+    intake: intake ?? null,
+    body_composition: body,
+    race: raceDate
+      ? {
+          date: raceDate,
+          label: settings.race_label ?? null,
+          distance_km: Number(settings.race_distance_km ?? 0) || null,
+          target_minutes: Number(settings.race_target_minutes ?? 0) || null,
+          fuel_g_per_hour: Number(settings.race_fuel_g_per_hour ?? 0) || null,
+          gel_carbs_g: Number(settings.race_gel_carbs_g ?? 0) || null,
+          days_to: daysToRace,
+        }
+      : null,
+    freshness: await freshnessInfo(env, settings),
+  });
+}
+
+/** Prescribed sessions over a range. Powers the week rail and the Training tab. */
+async function handlePlan(request, env) {
+  const { searchParams } = new URL(request.url);
+  const today = sydneyDate(new Date());
+  const from = safeDate(searchParams.get('from'), today);
+  const to = safeDate(searchParams.get('to'), '2026-12-31');
+
+  const { results: sessions } = await env.DB.prepare(
+    `SELECT * FROM plan_sessions
+      WHERE local_date BETWEEN ? AND ? AND deleted_at IS NULL
+      ORDER BY local_date`
+  ).bind(from, to).all();
+
+  const { results: exercises } = await env.DB.prepare(
+    `SELECT local_date, ord, exercise, sets_reps, note FROM plan_exercises
+      WHERE local_date BETWEEN ? AND ? AND deleted_at IS NULL
+      ORDER BY local_date, ord`
+  ).bind(from, to).all();
+
+  const byDate = {};
+  for (const e of exercises) (byDate[e.local_date] ??= []).push(e);
+
+  return Response.json({
+    ok: true,
+    from,
+    to,
+    count: sessions.length,
+    sessions: sessions.map((s) => ({ ...s, exercises: byDate[s.local_date] ?? [] })),
+  });
+}
+
+/** Daily rows over a range. Powers Summary, Body and the calendar. */
+async function handleDays(request, env) {
+  const { searchParams } = new URL(request.url);
+  const to = safeDate(searchParams.get('to'), sydneyDate(new Date()));
+  const from = safeDate(searchParams.get('from'), '2026-01-01');
+
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM v_daily WHERE local_date BETWEEN ? AND ? ORDER BY local_date DESC`
+  ).bind(from, to).all();
+
+  return Response.json({ ok: true, from, to, count: results.length, days: results });
+}
+
+/**
+ * Runs, plus the race-day distance spike computed live.
+ *
+ * The spike is never hardcoded. Two documents in this project disagreed about
+ * it — one said +32%, one said +83% — because the 32 km run of 12 July fell
+ * out of the 30-day window while nobody was looking. Computing it here means
+ * the number cannot go stale.
+ */
+async function handleRuns(request, env) {
+  const { searchParams } = new URL(request.url);
+  const to = safeDate(searchParams.get('to'), sydneyDate(new Date()));
+  const from = safeDate(searchParams.get('from'), '2026-01-01');
+
+  const { results: runs } = await env.DB.prepare(
+    `SELECT * FROM v_run_readiness WHERE local_date BETWEEN ? AND ? ORDER BY local_date DESC`
+  ).bind(from, to).all();
+
+  const settings = await settingsMap(env);
+  const raceDate = settings.race_date ?? null;
+  const raceKm = Number(settings.race_distance_km ?? 0) || null;
+
+  let spike = null;
+  if (raceDate && raceKm) {
+    const longest = await env.DB.prepare(
+      `SELECT local_date, ROUND(MAX(distance_km), 2) AS km,
+              DATE(?, '-30 days') AS window_opens
+         FROM workouts
+        WHERE kind = 'run' AND deleted_at IS NULL
+          AND local_date >= DATE(?, '-30 days') AND local_date < ?
+          AND (notes IS NULL OR notes NOT LIKE 'superseded%')`
+    ).bind(raceDate, raceDate, raceDate).first();
+
+    spike = longest?.km
+      ? {
+          longest_km: longest.km,
+          longest_date: longest.local_date,
+          window_opens: longest.window_opens,
+          race_km: raceKm,
+          increase_pct: Math.round((raceKm / longest.km - 1) * 1000) / 10,
+          basis: 'Longest run in the 30 days before race day, superseded rows excluded',
+        }
+      : null;
+  }
+
+  return Response.json({ ok: true, from, to, count: runs.length, runs, race_spike: spike });
+}
+
+/** Targets for a single date, day-type aware. v_daily cannot do this — its join is hardcoded to 'default'. */
+async function handleTargets(request, env) {
+  const { searchParams } = new URL(request.url);
+  const date = safeDate(searchParams.get('date'), sydneyDate(new Date()));
+  const plan = await planFor(env, date);
+  // An explicit ?day_type= wins, so the Diet tab can preview a different day
+  // type without a plan row existing for that date.
+  const dayType = searchParams.get('day_type') || dayTypeForPlan(plan);
+  const targets = await resolveTargets(env, date, dayType);
+
+  return Response.json({
+    ok: true,
+    date,
+    day_type: dayType,
+    targets,
+    // Targets expire deliberately on 22 Aug so they must be reviewed, not
+    // inherited. The app says this rather than showing an empty card.
+    expired: targets === null,
+    review_due: (await settingsMap(env)).targets_review_due ?? null,
+  });
+}
+
+// ─────────────────────────── write API ───────────────────────────
+
+/** Every rating in this schema is 1–5, and 1 is always the bad end. */
+const RATING_KEYS = [
+  'sleep_quality', 'fatigue', 'soreness', 'stress', 'session_effort',
+  'performance', 'strength_feel', 'session_enjoyment', 'hunger', 'cravings', 'libido',
+];
+
+/** null for absent, undefined for invalid — the caller must tell them apart. */
+function rating(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 && n <= 5 ? n : undefined;
+}
+
+function boundedNumber(v, lo, hi) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= lo && n <= hi ? n : undefined;
+}
+
+function textOrNull(v, max = 2000) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s === '' ? null : s.slice(0, max);
+}
+
+/**
+ * The daily check-in.
+ *
+ * Design notes:
+ *  - Everything is written with source='app'. Both target tables have source
+ *    in their key, so an app row can never collide with a Withings or HAE row
+ *    and the existing view precedence keeps working untouched.
+ *  - Upserts use COALESCE, so saving half the form in the morning and the rest
+ *    at night does not wipe the morning. Only a supplied value overwrites.
+ *  - Idempotent: the same save twice is the same row. A retry from a flaky
+ *    5am connection is harmless.
+ *  - Invalid input is rejected with a reason. It is never coerced into
+ *    something plausible — a silently corrected number is a fabricated one.
+ */
+async function handleLog(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: 'Body must be JSON' }, { status: 400 });
+  }
+
+  const today = sydneyDate(new Date());
+  const date = safeDate(body?.local_date, null);
+  if (!date) return Response.json({ error: 'local_date must be YYYY-MM-DD' }, { status: 400 });
+  if (date > today) {
+    return Response.json({ error: 'Cannot log a future date', today }, { status: 400 });
+  }
+
+  const errors = [];
+  const r = body?.ratings ?? {};
+  const ratings = {};
+  for (const k of RATING_KEYS) {
+    const v = rating(r[k]);
+    if (v === undefined) errors.push(`${k} must be a whole number from 1 to 5`);
+    else ratings[k] = v;
+  }
+
+  // CHECK constraint on the column is 0–16, not 0–24. Match it here so the
+  // failure is a clear message rather than a constraint error.
+  const hoursSlept = boundedNumber(r.hours_slept, 0, 16);
+  if (hoursSlept === undefined) errors.push('hours_slept must be between 0 and 16');
+
+  const waterL = boundedNumber(r.water_l, 0, 15);
+  if (waterL === undefined) errors.push('water_l must be between 0 and 15');
+
+  const weight = boundedNumber(body?.weight_kg, 40, 200);
+  if (weight === undefined) errors.push('weight_kg must be between 40 and 200');
+
+  if (errors.length) {
+    return Response.json({ error: 'Validation failed', details: errors }, { status: 400 });
+  }
+
+  const notes = textOrNull(body?.notes);
+  const cardioNote = textOrNull(body?.cardio_note);
+
+  await env.DB.prepare(
+    `INSERT INTO daily_log
+       (local_date, hours_slept, sleep_quality, fatigue, soreness, stress,
+        session_effort, notes, performance, strength_feel, session_enjoyment,
+        hunger, cravings, libido, water_l, cardio_note, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'app')
+     ON CONFLICT (local_date) DO UPDATE SET
+       hours_slept       = COALESCE(excluded.hours_slept,       daily_log.hours_slept),
+       sleep_quality     = COALESCE(excluded.sleep_quality,     daily_log.sleep_quality),
+       fatigue           = COALESCE(excluded.fatigue,           daily_log.fatigue),
+       soreness          = COALESCE(excluded.soreness,          daily_log.soreness),
+       stress            = COALESCE(excluded.stress,            daily_log.stress),
+       session_effort    = COALESCE(excluded.session_effort,    daily_log.session_effort),
+       notes             = COALESCE(excluded.notes,             daily_log.notes),
+       performance       = COALESCE(excluded.performance,       daily_log.performance),
+       strength_feel     = COALESCE(excluded.strength_feel,     daily_log.strength_feel),
+       session_enjoyment = COALESCE(excluded.session_enjoyment, daily_log.session_enjoyment),
+       hunger            = COALESCE(excluded.hunger,            daily_log.hunger),
+       cravings          = COALESCE(excluded.cravings,          daily_log.cravings),
+       libido            = COALESCE(excluded.libido,            daily_log.libido),
+       water_l           = COALESCE(excluded.water_l,           daily_log.water_l),
+       cardio_note       = COALESCE(excluded.cardio_note,       daily_log.cardio_note),
+       updated_at        = datetime('now')`
+  ).bind(
+    date, hoursSlept,
+    ratings.sleep_quality, ratings.fatigue, ratings.soreness, ratings.stress,
+    ratings.session_effort, notes, ratings.performance, ratings.strength_feel,
+    ratings.session_enjoyment, ratings.hunger, ratings.cravings, ratings.libido,
+    waterL, cardioNote
+  ).run();
+
+  // Weight goes to body_measurements, not daily_log — one home per fact.
+  // A fixed occurred_at makes re-saving the same day an update, not a duplicate.
+  let weightNote = null;
+  if (weight !== null) {
+    await env.DB.prepare(
+      `INSERT INTO body_measurements
+         (metric, value, units, occurred_at, local_date, source, entry_method, is_estimate)
+       VALUES ('weight', ?, 'kg', ?, ?, 'app', 'manual', 0)
+       ON CONFLICT (metric, occurred_at, source)
+       DO UPDATE SET value = excluded.value`
+    ).bind(weight, `${date}T00:00:00.000Z`, date).run();
+
+    // v_daily_weight ranks Withings above everything else. If the scale already
+    // recorded today, charts will keep showing that number — say so plainly
+    // rather than let it look like the save was ignored.
+    const withings = await env.DB.prepare(
+      `SELECT value FROM body_measurements
+        WHERE metric = 'weight' AND local_date = ? AND source = 'Withings'
+          AND deleted_at IS NULL LIMIT 1`
+    ).bind(date).first();
+
+    if (withings) {
+      weightNote =
+        `Saved, but Withings also recorded ${Math.round(withings.value * 10) / 10} kg ` +
+        `for ${date}. The scale takes precedence in charts and averages.`;
+    }
+  }
+
+  const row = await env.DB.prepare(
+    `SELECT * FROM daily_log WHERE local_date = ?`
+  ).bind(date).first();
+
+  return Response.json({
+    ok: true,
+    date,
+    saved: { daily_log: true, weight: weight !== null },
+    weight_note: weightNote,
+    row,
+  });
+}
+
 // ─────────────────────────── CORS ───────────────────────────
 
 /**
@@ -565,6 +996,25 @@ export default {
 
     if (url.pathname === '/data/summary' && request.method === 'GET')
       return cors(await handleSummary(env));
+
+    // ── read API for the front end ──
+    if (url.pathname === '/api/today' && request.method === 'GET')
+      return cors(await handleToday(request, env));
+
+    if (url.pathname === '/api/plan' && request.method === 'GET')
+      return cors(await handlePlan(request, env));
+
+    if (url.pathname === '/api/days' && request.method === 'GET')
+      return cors(await handleDays(request, env));
+
+    if (url.pathname === '/api/runs' && request.method === 'GET')
+      return cors(await handleRuns(request, env));
+
+    if (url.pathname === '/api/targets' && request.method === 'GET')
+      return cors(await handleTargets(request, env));
+
+    if (url.pathname === '/api/log' && request.method === 'POST')
+      return cors(await handleLog(request, env));
 
     return cors(Response.json(
       { error: 'Not found', path: url.pathname, method: request.method },
