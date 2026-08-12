@@ -895,11 +895,16 @@ async function currentForMetric(env, key, date) {
       const s = await settingsMap(env);
       const raceKm = Number(s.race_distance_km ?? 0);
       if (!raceKm) return { value: null, sample: 0 };
+      // .bind() — not a second argument to prepare(). prepare() takes the SQL
+      // and nothing else, so passing the date there left the ? unbound and D1
+      // rejected the statement. The other cases avoid this by going through
+      // one(), which binds for them.
       const { results } = await env.DB.prepare(
         `SELECT distance_km, duration_min FROM workouts
           WHERE kind='run' AND deleted_at IS NULL AND distance_km >= 15 AND duration_min IS NOT NULL
             AND local_date > DATE(?, '-120 days')
-            AND (notes IS NULL OR notes NOT LIKE 'superseded%')`, date).all();
+            AND (notes IS NULL OR notes NOT LIKE 'superseded%')`
+      ).bind(date).all();
       if (!results.length) return { value: null, sample: 0 };
       const projections = results.map((r) => r.duration_min * Math.pow(raceKm / r.distance_km, 1.06));
       return { value: Math.round(Math.min(...projections)), sample: results.length,
