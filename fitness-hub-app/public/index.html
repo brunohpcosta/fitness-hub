@@ -238,6 +238,25 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         <div class="note">These defaults mirror <span class="num">settings</span> in D1 (<span class="num">race_date</span>, <span class="num">race_fuel_g_per_hour</span>, <span class="num">race_gel_carbs_g</span>, <span class="num">race_target_minutes</span>). They are hardcoded here only because step 1 has no API yet — step 4 reads them live so this screen can never drift from the database.</div>
       </div>
 
+      <div class="seclab">current form</div>
+      <div class="grid g2 wide" id="formtiles" style="margin-bottom:11px"></div>
+      <div id="coachflags"></div>
+
+      <div class="cols">
+        <div>
+          <div class="seclab">recent runs</div>
+          <div class="card" id="runlist"></div>
+        </div>
+        <div>
+          <div class="seclab">weekly distance</div>
+          <div class="card" id="loadcard"></div>
+          <div class="seclab">race projection</div>
+          <div class="card" id="projcard"></div>
+          <div class="seclab">training zones</div>
+          <div class="card" id="zonecard"></div>
+        </div>
+      </div>
+
       <div class="seclab">refuel calculator</div>
       <div class="card">
 
@@ -297,7 +316,23 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 
     </section>
 
-    <section class="page" id="p-diet"></section>
+    <!-- DIET -->
+    <section class="page" id="p-diet">
+      <div class="seclab">today</div>
+      <div class="card" id="diettoday"></div>
+      <div class="cols">
+        <div>
+          <div class="seclab">the days ahead</div>
+          <div class="card flush" id="dietahead"></div>
+        </div>
+        <div>
+          <div class="seclab">last 14 days</div>
+          <div class="card" id="diethistory"></div>
+          <div class="seclab">energy balance tool</div>
+          <div class="card" id="dietratio"></div>
+        </div>
+      </div>
+    </section>
     <section class="page" id="p-body"></section>
     <section class="page" id="p-goals"></section>
 
@@ -317,6 +352,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
     <button class="btn pri f" onclick="saveCfg()">Save and reload data</button>
     <div class="note">Stored only on this device, in this browser. Sent as a bearer token over HTTPS. Clearing Safari data removes it.</div>
     <div id="cfgstate" style="margin-top:11px"></div>
+    <div class="ch" style="margin-top:16px;margin-bottom:9px"><span class="ct">Offline support</span></div>
+    <div id="swstate"></div>
+    <button class="btn f" style="margin-top:9px" onclick="checkOffline()">Re-check</button>
   </div>
 </div>
 
@@ -371,8 +409,51 @@ function saveCfg(){
     if(res.ok)refresh();
   });
 }
+/* Whether the app will actually survive a cold start with no signal is not
+   something to find out on race morning. This reports it directly. */
+function checkOffline(){
+  var el=$('swstate');if(!el)return;
+  if(!('serviceWorker' in navigator)){
+    el.innerHTML='<div class="warn">This browser does not support offline mode.</div>';return;
+  }
+  el.innerHTML='<div class="info">Checking…</div>';
+
+  navigator.serviceWorker.getRegistration().then(function(reg){
+    var controlled=!!navigator.serviceWorker.controller;
+    if(!reg){
+      el.innerHTML='<div class="warn"><b>Not installed.</b> Reload this page once with a connection.</div>';
+      return;
+    }
+    // Being registered is not the same as controlling this page. On a first
+    // visit the worker installs but does not take over until the next launch.
+    if(!controlled){
+      el.innerHTML='<div class="warn"><b>Installed but not yet active.</b> '+
+        'Close the app completely and reopen it once, then check again.</div>';
+      return;
+    }
+    // The real test: is the document itself actually in the cache?
+    caches.keys().then(function(keys){
+      var mine=keys.filter(function(k){return k.indexOf('fitness-hub-shell')===0;});
+      if(!mine.length){el.innerHTML='<div class="warn">Active, but nothing is cached yet.</div>';return;}
+      caches.open(mine[0]).then(function(c){
+        return Promise.all([c.match('/index.html'),c.keys()]);
+      }).then(function(res){
+        var doc=res[0], n=res[1].length;
+        el.innerHTML = doc
+          ? '<div class="ok"><b>Ready for offline use.</b> '+n+' files cached in <span class="num">'+esc(mine[0])+'</span>. '+
+            'The app will open with no signal.</div>'
+          : '<div class="warn"><b>Active, but the page itself is not cached.</b> '+
+            'Reload once with a connection, then check again.</div>';
+      });
+    });
+  }).catch(function(){
+    el.innerHTML='<div class="warn">Could not read the offline state.</div>';
+  });
+}
+
 var DEFAULT_API='https://fitness-hub-api.bruno-hpc93.workers.dev';
 function openSheet(){
+  checkOffline();
   // Prefill rather than rely on a placeholder — the API address is not
   // something worth making anyone remember or retype at 5am.
   $('cfg-url').value=CFG.url||DEFAULT_API;
@@ -531,6 +612,10 @@ function go(id){
   });
   var t=TABS.find(function(x){return x[0]===id;});
   if(t){$('eyebrow').textContent=t[1];$('title').textContent=t[2];}
+  // Runs are fetched only when the tab is first opened — no point spending a
+  // request at 5am on a screen that is not being looked at.
+  if(id==='running')loadRunning();
+  if(id==='diet'){loadDiet();renderDiet();}
   window.scrollTo(0,0);
 }
 
@@ -539,7 +624,7 @@ function go(id){
    never reads as a bug. */
 function buildStubs(){
   TABS.forEach(function(t){
-    if(t[0]==='running'||t[0]==='hub')return;
+    if(t[0]==='running'||t[0]==='hub'||t[0]==='diet')return;
     $('p-'+t[0]).innerHTML=
       '<div class="stub"><b>'+esc(t[2])+' is not connected yet</b>'+
       'This tab arrives in <span class="num">'+esc(t[4])+'</span> of the Stage 4 build.<br>'+
@@ -925,6 +1010,298 @@ function daysToRace(){
   return Math.round((r-now)/86400000);
 }
 
+/* ─────────────────────────── diet ─────────────────────────── */
+var DAYS14=null, DIET_LOADED=false;
+
+function loadDiet(){
+  if(DIET_LOADED||!CFG.url||!CFG.key)return;
+  DIET_LOADED=true;
+  api('/api/days?from='+isoOf(new Date(Date.now()-14*86400000))).then(function(j){
+    DAYS14=j.days||[]; renderDiet();
+  }).catch(function(){
+    DIET_LOADED=false;
+    $('diethistory').innerHTML='<div class="warn">Could not load history.</div>';
+  });
+}
+
+function renderDiet(){
+  renderDietToday();
+  renderDietAhead();
+  renderDietHistory();
+  renderDietRatio();
+}
+
+function renderDietToday(){
+  var el=$('diettoday');
+  if(!DATA){el.innerHTML='<div class="note">Connect to load.</div>';return;}
+  var t=DATA.targets, i=DATA.intake;
+  if(!t){
+    el.innerHTML='<div class="warn">No targets for '+esc(DATA.date)+
+      '. The current block expires on 22 August by design, so it is reviewed rather than inherited.</div>';
+    return;
+  }
+  var h='<div class="ch"><span class="ct">'+esc(DATA.day_type)+' day</span>'+
+        '<span class="cm num">'+esc(DATA.date)+'</span></div>';
+  h+=macroRow('Energy', i?i.energy_kcal:null, t.energy_kcal,'var(--amber)');
+  h+=macroRow('Protein', i?i.protein_g:null, t.protein_g,'var(--accent)');
+  h+=macroRow('Carbs',   i?i.carbs_g:null,   t.carbs_g,'var(--green)');
+  h+=macroRow('Fat',     i?i.fat_g:null,     t.fat_g,'var(--blue)');
+
+  if(i&&(i.fibre_g!=null||i.sodium_mg!=null)){
+    h+='<div class="grid g2" style="margin-top:11px">'+
+       '<div class="tile"><div class="tl">Fibre</div><div class="tv num">'+(i.fibre_g!=null?n1(i.fibre_g)+' g':'—')+'</div></div>'+
+       '<div class="tile"><div class="tl">Sodium</div><div class="tv num">'+(i.sodium_mg!=null?n0(i.sodium_mg)+' mg':'—')+'</div></div></div>';
+  }
+  if(t.protein_basis==='g_per_kg_bodyweight'&&t.protein_basis_value){
+    h+='<div class="note">Protein set at '+t.protein_basis_value+' g per kg of bodyweight.'+
+       (t.fat_floor_basis==='pct_energy'?' Fat floor '+t.fat_floor_value+'% of energy.':'')+'</div>';
+  }
+  if(t.fell_back){
+    h+='<div class="info">General target for this period, not one set for a '+esc(t.requested_day_type||'')+' day.</div>';
+  }
+  if(!i)h+='<div class="note">No intake recorded for today yet.</div>';
+  el.innerHTML=h;
+}
+
+/* The forward view. This is the one that matters for the carb load — being
+   able to see the 20th and 21st jump to 555 g before you get there. */
+function renderDietAhead(){
+  var el=$('dietahead');
+  if(!PLAN||!PLAN.length){el.innerHTML='<div class="note">No plan loaded.</div>';return;}
+  var today=isoOf(new Date());
+  var rows=PLAN.filter(function(s){return s.local_date>=today;});
+  if(!rows.length){el.innerHTML='<div class="note">No days ahead in the plan.</div>';return;}
+
+  el.innerHTML=rows.map(function(s){
+    var t=s.targets;
+    var right = t
+      ? '<span class="rv"><b class="num">'+n0(t.energy_kcal)+'</b> kcal · '+n0(t.carbs_g)+' C</span>'
+      : '<span class="rv">no target</span>';
+    var load = (t&&t.carbs_g>=500)?' · carb load':'';
+    return '<div class="row"><div class="rmain">'+
+      '<div class="rt">'+esc(fmtDate(s.local_date))+'</div>'+
+      '<div class="rsub">'+esc(s.day_label+' · '+(s.day_type||'')+(t&&t.fell_back?' (general)':'')+load)+'</div>'+
+      '</div>'+right+'</div>';
+  }).join('')+
+  '<div class="note" style="padding:12px 15px 14px">Targets after 22 August expire deliberately, to force a review rather than let a race-week block roll on.</div>';
+}
+
+function renderDietHistory(){
+  var el=$('diethistory');
+  if(!DAYS14){el.innerHTML='<div class="note">Loading…</div>';return;}
+  var withIntake=DAYS14.filter(function(d){return d.energy_kcal!=null;});
+  if(!withIntake.length){
+    el.innerHTML='<div class="warn"><b>No intake recorded in the last 14 days.</b> '+
+      'Cronometer data reaches D1 only if Health Auto Export is exporting the dietary metrics '+
+      'and the Worker routes them into nutrition_intake. Both are needed.</div>';
+    return;
+  }
+  var avg=function(k){
+    var v=withIntake.map(function(d){return d[k];}).filter(function(x){return x!=null;});
+    return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:null;
+  };
+  el.innerHTML=
+    '<div class="grid g2" style="margin-bottom:11px">'+
+    '<div class="tile"><div class="tl">Days logged</div><div class="tv num">'+withIntake.length+' / 14</div></div>'+
+    '<div class="tile"><div class="tl">Avg energy</div><div class="tv num">'+n0(avg('energy_kcal'))+'</div><div class="tsub">kcal</div></div>'+
+    '<div class="tile"><div class="tl">Avg protein</div><div class="tv num">'+n0(avg('protein_g'))+'</div><div class="tsub">g</div></div>'+
+    '<div class="tile"><div class="tl">Avg carbs</div><div class="tv num">'+n0(avg('carbs_g'))+'</div><div class="tsub">g</div></div>'+
+    '</div>'+
+    withIntake.slice(0,10).map(function(d){
+      return '<div class="exc"><div class="eh"><span class="en">'+esc(fmtDate(d.local_date))+'</span>'+
+        '<span class="eset">'+n0(d.energy_kcal)+' kcal</span></div>'+
+        '<div class="enote">'+n0(d.protein_g)+' P · '+n0(d.carbs_g)+' C · '+n0(d.fat_g)+' F</div></div>';
+    }).join('')+
+    '<div class="note">Averages cover only the days with intake recorded. Days with no entry are excluded rather than counted as zero — a missing log is not a fast.</div>';
+}
+
+/* Client-side arithmetic. Deliberately not stored: this is a thinking tool,
+   not a target. Targets live in the database and are set deliberately. */
+var BAL='c';
+function setBal(k){BAL=k;renderDietRatio();}
+function renderDietRatio(){
+  var el=$('dietratio');
+  var t=(DATA&&DATA.targets)||null;
+  if(!t){el.innerHTML='<div class="note">No target to adjust.</div>';return;}
+  var def=(typeof RATIO_DEF==='undefined')?0:RATIO_DEF;
+  var kcal=t.energy_kcal+def;
+  var p=t.protein_g, f=t.fat_g, c;
+  if(BAL==='p'){ p=Math.max(0,Math.round((kcal-t.carbs_g*4-t.fat_g*9)/4)); c=t.carbs_g; }
+  else if(BAL==='f'){ f=Math.max(0,Math.round((kcal-t.carbs_g*4-t.protein_g*4)/9)); c=t.carbs_g; }
+  else { c=Math.max(0,Math.round((kcal-t.protein_g*4-t.fat_g*9)/4)); }
+
+  el.innerHTML=
+    '<div class="sl"><span>Adjust energy</span><b class="num">'+(def>0?'+':'')+def+' kcal</b></div>'+
+    '<input type="range" id="ratio-def" min="-900" max="900" step="25" value="'+def+'" oninput="setRatio(this.value)">'+
+    '<div style="font-size:11px;color:var(--t2);margin:9px 0 6px">Which macro absorbs the change</div>'+
+    '<div class="seg"><button class="'+(BAL==='p'?'on':'')+'" onclick="setBal(\'p\')">Protein</button>'+
+    '<button class="'+(BAL==='c'?'on':'')+'" onclick="setBal(\'c\')">Carbs</button>'+
+    '<button class="'+(BAL==='f'?'on':'')+'" onclick="setBal(\'f\')">Fat</button></div>'+
+    '<div class="grid g4">'+
+    '<div class="tile"><div class="tl">kcal</div><div class="tv num">'+n0(kcal)+'</div></div>'+
+    '<div class="tile"><div class="tl">Protein</div><div class="tv num">'+p+'</div></div>'+
+    '<div class="tile"><div class="tl">Carbs</div><div class="tv num">'+c+'</div></div>'+
+    '<div class="tile"><div class="tl">Fat</div><div class="tv num">'+f+'</div></div>'+
+    '</div>'+
+    ((t.fat_floor_basis==='pct_energy'&&f*9/kcal*100<t.fat_floor_value)
+      ? '<div class="warn" style="margin-top:11px">Fat is below the '+t.fat_floor_value+'% floor set for this block.</div>' : '')+
+    '<div class="note">Scratch pad only — nothing here is saved. Your actual targets live in the database and are set deliberately, not slid to.</div>';
+}
+var RATIO_DEF=0;
+function setRatio(v){RATIO_DEF=parseInt(v,10)||0;renderDietRatio();}
+
+/* ─────────────────────────── running ─────────────────────────── */
+var RUNS=null, RSPIKE=null, RUNS_LOADED=false;
+
+function loadRunning(){
+  if(RUNS_LOADED||!CFG.url||!CFG.key)return;
+  RUNS_LOADED=true;
+  var from=isoOf(new Date(Date.now()-120*86400000));
+  api('/api/runs?from='+from).then(function(j){
+    RUNS=j.runs||[]; RSPIKE=j.race_spike||null;
+    renderRunning();
+  }).catch(function(){
+    RUNS_LOADED=false;
+    $('runlist').innerHTML='<div class="warn">Could not load runs.</div>';
+  });
+}
+
+function paceStr(secPerKm){
+  if(!secPerKm)return '—';
+  var m=Math.floor(secPerKm/60), s=Math.round(secPerKm%60);
+  if(s===60){m++;s=0;}
+  return m+':'+String(s).padStart(2,'0');
+}
+function fmtDate(iso){
+  var d=new Date(iso+'T12:00:00');
+  return DAYS[d.getDay()]+' '+d.getDate()+' '+
+    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+}
+
+/* Monday-start weekly buckets from the run list. */
+function weeklyKm(runs,weeks){
+  var out={},now=new Date();
+  for(var w=weeks-1;w>=0;w--){
+    var d=new Date(now); d.setDate(now.getDate()-(w*7));
+    var dow=d.getDay(); d.setDate(d.getDate()+(dow===0?-6:1-dow));
+    out[isoOf(d)]=0;
+  }
+  runs.forEach(function(r){
+    var d=new Date(r.local_date+'T12:00:00'), dow=d.getDay();
+    d.setDate(d.getDate()+(dow===0?-6:1-dow));
+    var k=isoOf(d);
+    if(k in out) out[k]+=(r.distance_km||0);
+  });
+  return Object.keys(out).sort().map(function(k){return {week:k,km:Math.round(out[k]*10)/10};});
+}
+
+function renderRunning(){
+  if(!RUNS){
+    $('formtiles').innerHTML='';
+    $('runlist').innerHTML='<div class="note">Connect to load runs.</div>';
+    return;
+  }
+  var race=(DATA&&DATA.race)||{};
+  var today=isoOf(new Date());
+
+  // ── form tiles ──
+  var last=RUNS[0]||null;
+  var km7=RUNS.filter(function(r){return r.local_date>isoOf(new Date(Date.now()-7*86400000));})
+              .reduce(function(a,r){return a+(r.distance_km||0);},0);
+  var km28=RUNS.filter(function(r){return r.local_date>isoOf(new Date(Date.now()-28*86400000));})
+               .reduce(function(a,r){return a+(r.distance_km||0);},0);
+
+  $('formtiles').innerHTML=
+    widget('Last run', last?n1(last.distance_km):null,' km', last?fmtDate(last.local_date)+' · '+(last.pace||'—')+'/km':'none logged')+
+    widget('7-day volume', n1(km7),' km','')+
+    widget('28-day volume', n1(km28),' km', RUNS.length+' runs')+
+    widget('Longest in window', RSPIKE?RSPIKE.longest_km:null,' km',
+           RSPIKE?('since '+RSPIKE.window_opens):'');
+
+  // ── coach flags ──
+  var flags='';
+  if(RSPIKE){
+    flags+='<div class="warn"><b>Race day is +'+RSPIKE.increase_pct+'% on your longest run in the window</b> ('+
+      RSPIKE.longest_km+' km on '+fmtDate(RSPIKE.longest_date)+'). '+
+      'That sits in the >30–100% band of the BJSM cohort study, adjusted hazard ratio 1.52 (1.16–2.00). '+
+      'Observational, self-reported outcome, and the bands are non-monotonic — treat it as a flag, not a forecast.</div>';
+  }
+  if(race.days_to!=null&&race.days_to>=0&&race.days_to<=14){
+    flags+='<div class="info">Taper: volume should fall 41–60% while intensity and frequency hold '+
+      '(Bosquet 2007 meta-analysis). Race in '+race.days_to+' day'+(race.days_to===1?'':'s')+'.</div>';
+  }
+  $('coachflags').innerHTML=flags;
+
+  // ── recent runs ──
+  var rows=RUNS.slice(0,12).map(function(r){
+    var hr=r.avg_hr?(' · '+Math.round(r.avg_hr)+' bpm'):'';
+    return '<div class="exc"><div class="eh"><span class="en">'+esc(fmtDate(r.local_date))+'</span>'+
+           '<span class="eset">'+n1(r.distance_km)+' km</span></div>'+
+           '<div class="enote">'+esc((r.pace||'—')+'/km'+hr+
+           (r.duration_min?(' · '+Math.round(r.duration_min)+' min'):''))+'</div></div>';
+  }).join('');
+  $('runlist').innerHTML = rows +
+    '<div class="note"><b>Per-kilometre splits and route maps are not available.</b> '+
+    'D1 holds minute-grouped heart rate for runs but no per-km splits, and route_r2_key '+
+    'has never been populated — 0 of 312 runs. Deriving splits from heart rate would be '+
+    'a guess presented as a measurement, so they are shown as absent instead.</div>';
+
+  // ── weekly load ──
+  var wk=weeklyKm(RUNS,10);
+  var maxKm=Math.max.apply(null,wk.map(function(w){return w.km;}).concat([1]));
+  var bars=wk.map(function(w){
+    var pct=(w.km/maxKm)*100;
+    var isThis=w.week===isoOf(new Date(new Date().setDate(new Date().getDate()-((new Date().getDay()||7)-1))));
+    return '<div class="mrow"><div class="mh"><span>'+esc(w.week.slice(5))+'</span><b>'+w.km+' km</b></div>'+
+           '<div class="bar"><i style="width:'+pct.toFixed(1)+'%;background:'+(isThis?'var(--accent)':'var(--blue)')+'"></i></div></div>';
+  }).join('');
+  $('loadcard').innerHTML=bars+
+    '<div class="note">Monday-start weeks. Superseded rows excluded, so the Strava duplicates no longer double-count.</div>';
+
+  // ── race projection ──
+  var longs=RUNS.filter(function(r){return r.distance_km>=15&&r.pace_sec_per_km;});
+  if(longs.length&&race.distance_km){
+    var projs=longs.map(function(r){
+      var t1=(r.duration_min!=null)?r.duration_min:(r.distance_km*r.pace_sec_per_km/60);
+      return {mins:t1*Math.pow(race.distance_km/r.distance_km,1.06),from:r};
+    }).sort(function(a,b){return a.mins-b.mins;});
+    var best=projs[0], worst=projs[projs.length-1];
+    var target=race.target_minutes;
+    $('projcard').innerHTML=
+      '<div class="grid g3" style="margin-bottom:11px">'+
+      '<div class="tile"><div class="tl">Fastest</div><div class="tv num">'+hm(best.mins)+'</div>'+
+      '<div class="tsub">'+esc(fmtDate(best.from.local_date))+'</div></div>'+
+      '<div class="tile"><div class="tl">Slowest</div><div class="tv num">'+hm(worst.mins)+'</div>'+
+      '<div class="tsub">'+esc(fmtDate(worst.from.local_date))+'</div></div>'+
+      '<div class="tile"><div class="tl">Target</div><div class="tv num">'+(target?hm(target):'—')+'</div>'+
+      '<div class="tsub">'+(target?mmss(target/race.distance_km)+'/km':'')+'</div></div></div>'+
+      (target&&best.mins>target
+        ? '<div class="warn">Every projection is slower than your sub-4 target. Riegel also assumes a distance-adequate base, which it does not have here — so treat these as a ceiling rather than a plan.</div>'
+        : '<div class="info">Riegel assumes an endurance base appropriate to the distance and runs optimistic without one. Treat it as a ceiling, not a plan.</div>')+
+      '<div class="note">T₂ = T₁ × (D₂/D₁)^1.06, applied to every logged run of 15 km or more in the last 120 days.</div>';
+  }else{
+    $('projcard').innerHTML='<div class="note">No run of 15 km or more in the last 120 days to project from.</div>';
+  }
+
+  // ── zones ──
+  var maxHr=0;
+  RUNS.forEach(function(r){ if(r.max_hr&&r.max_hr>maxHr)maxHr=r.max_hr; });
+  var restHr=(DATA&&DATA.actual&&DATA.actual.resting_hr)||null;
+  if(maxHr&&restHr){
+    var hrr=maxHr-restHr;
+    var zs=[['Z1 recovery',50,60],['Z2 easy',60,70],['Z3 steady',70,80],['Z4 threshold',80,90],['Z5 max',90,100]];
+    $('zonecard').innerHTML=zs.map(function(z){
+      var lo=Math.round(restHr+hrr*z[1]/100), hi=Math.round(restHr+hrr*z[2]/100);
+      return '<div class="mrow"><div class="mh"><span>'+esc(z[0])+'</span><b class="num">'+lo+'–'+hi+' bpm</b></div></div>';
+    }).join('')+
+    '<div class="warn" style="margin-top:9px"><b>Provisional.</b> Karvonen method from your observed maximum of '+
+    Math.round(maxHr)+' bpm and resting '+Math.round(restHr)+' bpm — not a lab or field test. '+
+    'An observed maximum is a floor, not a true maximum: it only reflects how hard you have actually gone.</div>';
+  }else{
+    $('zonecard').innerHTML='<div class="note">Not enough heart-rate data to derive zones.</div>';
+  }
+}
+
 /* ─────────────────────────── refuel calculator ─────────────────────────── */
 /* Sodium is deliberately blank, not zero. The Coles gel sodium content is
    unverified — showing 0 would assert something we do not know. */
@@ -1067,6 +1444,17 @@ function boot(){
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden && DATA_AT && Date.now()-DATA_AT > 5*60000) refresh();
   });
+
+  // Losing the connection while the app sits open should be visible
+  // immediately, rather than only when something next tries to load.
+  window.addEventListener('offline',function(){
+    setSync('Offline · showing last loaded data','warn');
+  });
+  window.addEventListener('online',function(){
+    setSync('Back online · refreshing','warn');
+    refresh();
+  });
+  if(!navigator.onLine) setSync('Offline · showing last loaded data','warn');
 }
 
 if('serviceWorker' in navigator){

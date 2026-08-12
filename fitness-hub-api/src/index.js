@@ -85,6 +85,34 @@ function toCelsius(value, units) {
   return value;
 }
 
+/**
+ * Dietary metrics belong in nutrition_intake, not health_metrics.
+ *
+ * Names, units and source confirmed against real Cronometer payloads on
+ * 12 August 2026 — not assumed. Observed:
+ *   dietary_energy kcal · protein g · carbohydrates g · total_fat g
+ *   dietary_sugar g · sodium mg      all with source 'Cronometer'
+ *
+ * Note dietary_energy arrives in kcal, unlike active_energy which arrives in
+ * kJ. Units are read from the payload rather than assumed, so either works.
+ *
+ * fibre and water are mapped speculatively — those metrics were not enabled in
+ * Health Auto Export when this was written, so the exact names are UNVERIFIED.
+ * A wrong name here simply never fires; it cannot corrupt anything.
+ */
+const DIET_METRICS = {
+  dietary_energy: { col: 'energy_kcal', unit: 'energy' },
+  protein:        { col: 'protein_g',   unit: 'g' },
+  carbohydrates:  { col: 'carbs_g',     unit: 'g' },
+  total_fat:      { col: 'fat_g',       unit: 'g' },
+  dietary_sugar:  { col: 'sugar_g',     unit: 'g' },
+  sodium:         { col: 'sodium_mg',   unit: 'mg' },
+  saturated_fat:  { col: 'fat_saturated_g', unit: 'g' }, // unverified
+  fiber:          { col: 'fibre_g',     unit: 'g' },     // unverified
+  dietary_fiber:  { col: 'fibre_g',     unit: 'g' },     // unverified
+  dietary_water:  { col: 'water_l',     unit: 'l' },     // unverified
+};
+
 /** Which metrics belong in body_measurements rather than health_metrics. */
 const BODY_METRICS = {
   weight_body_mass: 'weight',
@@ -109,16 +137,50 @@ async function runBatched(env, statements, chunkSize = 20) {
 
 function parseMetrics(payload, batchId, dailyTotalSet, env) {
   const stmts = [];
-  const counts = { body: 0, metric: 0, skipped: 0, aggregated: 0 };
+  const counts = { body: 0, metric: 0, skipped: 0, aggregated: 0, diet: 0 };
 
   const metrics = payload?.data?.metrics;
   if (!Array.isArray(metrics)) return { stmts, counts };
+
+  // Dietary points accumulate here and are written once at the end, because
+  // nutrition_intake holds one row per day per source with a column per macro
+  // — not one row per datapoint.
+  const dietByDay = new Map(); // "date|source" -> { localDate, source, cols:{} }
 
   for (const metric of metrics) {
     const name = metric?.name;
     const units = metric?.units ?? '';
     const points = Array.isArray(metric?.data) ? metric.data : [];
     if (!name) continue;
+
+    // ---- dietary metrics ----
+    const diet = Object.prototype.hasOwnProperty.call(DIET_METRICS, name)
+      ? DIET_METRICS[name] : null;
+    if (diet) {
+      for (const p of points) {
+        const when = parseHaeDate(p?.date);
+        const qty = num(p?.qty);
+        if (!when || qty == null) { counts.skipped++; continue; }
+
+        // Convert from whatever the payload says, never from what we expect.
+        let value = qty;
+        if (diet.unit === 'energy') value = toKcal(qty, units);
+        else if (diet.unit === 'mg' && String(units).toLowerCase() === 'g') value = qty * 1000;
+        else if (diet.unit === 'g' && String(units).toLowerCase() === 'mg') value = qty / 1000;
+        else if (diet.unit === 'l' && String(units).toLowerCase() === 'ml') value = qty / 1000;
+
+        const source = p?.source ?? 'unknown';
+        const key = `${when.localDate}|${source}`;
+        if (!dietByDay.has(key)) {
+          dietByDay.set(key, { localDate: when.localDate, source, cols: {} });
+        }
+        const bucket = dietByDay.get(key).cols;
+        // Summed, so this is correct whether Health Auto Export sends one
+        // datapoint per day or one per meal.
+        bucket[diet.col] = (bucket[diet.col] ?? 0) + value;
+      }
+      continue; // deliberately not also stored in health_metrics — one home per fact
+    }
 
     // ---- metrics rolled up to one row per day ----
     if (dailyTotalSet.has(name)) {
@@ -213,6 +275,34 @@ function parseMetrics(payload, batchId, dailyTotalSet, env) {
         counts.metric++;
       }
     }
+  }
+
+  // ---- dietary rows, one per day per source ----
+  const DIET_COLS = [
+    'energy_kcal', 'protein_g', 'carbs_g', 'fat_g',
+    'fat_saturated_g', 'fibre_g', 'sugar_g', 'sodium_mg', 'water_l',
+  ];
+  for (const day of dietByDay.values()) {
+    const values = DIET_COLS.map((c) => (day.cols[c] ?? null));
+
+    // Each export carries the whole day, so a supplied column REPLACES rather
+    // than adds — otherwise a re-export would double the day. COALESCE keeps
+    // columns the payload did not mention, so enabling one metric later never
+    // wipes the others.
+    const setClause = DIET_COLS
+      .map((c) => `${c} = COALESCE(excluded.${c}, nutrition_intake.${c})`)
+      .join(',\n         ');
+
+    stmts.push(
+      env.DB.prepare(
+        `INSERT INTO nutrition_intake
+           (local_date, source, ${DIET_COLS.join(', ')})
+         VALUES (?, ?, ${DIET_COLS.map(() => '?').join(', ')})
+         ON CONFLICT (local_date, source) DO UPDATE SET
+         ${setClause}`
+      ).bind(day.localDate, day.source, ...values)
+    );
+    counts.diet++;
   }
 
   return { stmts, counts };
@@ -647,13 +737,21 @@ async function handlePlan(request, env) {
   const byDate = {};
   for (const e of exercises) (byDate[e.local_date] ??= []).push(e);
 
-  return Response.json({
-    ok: true,
-    from,
-    to,
-    count: sessions.length,
-    sessions: sessions.map((s) => ({ ...s, exercises: byDate[s.local_date] ?? [] })),
-  });
+  // Attach the nutrition targets each session implies. Doing it here rather
+  // than making the app ask per day means the Diet tab can show the whole
+  // carb-load week in one request, and the day-type logic lives in one place.
+  const withTargets = [];
+  for (const s of sessions) {
+    const dayType = dayTypeForPlan(s);
+    withTargets.push({
+      ...s,
+      exercises: byDate[s.local_date] ?? [],
+      day_type: dayType,
+      targets: await resolveTargets(env, s.local_date, dayType),
+    });
+  }
+
+  return Response.json({ ok: true, from, to, count: sessions.length, sessions: withTargets });
 }
 
 /** Daily rows over a range. Powers Summary, Body and the calendar. */
