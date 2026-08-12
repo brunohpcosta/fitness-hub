@@ -462,43 +462,113 @@ async function handleSummary(env) {
   });
 }
 
+// ─────────────────────────── CORS ───────────────────────────
+
+/**
+ * A browser will not let a page on one origin read a response from another
+ * unless the server says so. The phone posting from Health Auto Export is not
+ * a browser, which is why this has never been needed until now.
+ *
+ * Origins are allowlisted rather than using '*'. Not strictly required here —
+ * every endpoint is behind a bearer token anyway — but '*' would let any page
+ * on the internet make authenticated calls if the token ever leaked into a
+ * browser, and restricting it costs nothing.
+ */
+const ALLOWED_ORIGIN_EXACT = [
+  'https://bruno-fitness-hub.pages.dev', // production
+  'http://localhost:8788',               // python -m http.server, local testing
+  'http://127.0.0.1:8788',
+];
+
+/** Preview deploys get a per-deployment hostname: <hash>.bruno-fitness-hub.pages.dev */
+const ALLOWED_ORIGIN_SUFFIX = '.bruno-fitness-hub.pages.dev';
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGIN_EXACT.includes(origin)) return true;
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return protocol === 'https:' && hostname.endsWith(ALLOWED_ORIGIN_SUFFIX);
+  } catch {
+    return false;
+  }
+}
+
+function corsHeaders(origin) {
+  if (!isAllowedOrigin(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Max-Age': '86400',
+    // Responses differ by Origin, so caches must not serve one origin's
+    // response to another.
+    'Vary': 'Origin',
+  };
+}
+
+/** Copy a response, adding CORS headers. Responses are immutable, hence the clone. */
+function withCors(response, origin) {
+  const headers = corsHeaders(origin);
+  if (!Object.keys(headers).length) return response;
+  const out = new Response(response.body, response);
+  for (const [k, v] of Object.entries(headers)) out.headers.set(k, v);
+  return out;
+}
+
 // ─────────────────────────── router ───────────────────────────
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const origin = request.headers.get('Origin');
+    const cors = (response) => withCors(response, origin);
 
-    if (url.pathname === '/health') {
-      return Response.json({
-        ok: true, service: 'fitness-hub-api', time: new Date().toISOString(),
+    // Preflight is answered BEFORE the auth check, deliberately.
+    //
+    // Before a cross-origin request carrying an Authorization header, the
+    // browser sends a separate OPTIONS request asking permission — and that
+    // request does NOT include the header. If the auth gate below ran first it
+    // would return 401, the browser would never send the real request, and the
+    // failure would surface as an opaque CORS error rather than an auth one.
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: isAllowedOrigin(origin) ? 204 : 403,
+        headers: corsHeaders(origin),
       });
     }
 
+    if (url.pathname === '/health') {
+      return cors(Response.json({
+        ok: true, service: 'fitness-hub-api', time: new Date().toISOString(),
+      }));
+    }
+
     if (!env.INGEST_SECRET) {
-      return Response.json(
+      return cors(Response.json(
         { error: 'Server misconfigured: INGEST_SECRET is not set' }, { status: 500 }
-      );
+      ));
     }
 
     if (!safeEqual(request.headers.get('Authorization'), `Bearer ${env.INGEST_SECRET}`)) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return cors(Response.json({ error: 'Unauthorized' }, { status: 401 }));
     }
 
     if (url.pathname === '/ingest/raw' && request.method === 'POST')
-      return handleRawIngest(request, env);
+      return cors(await handleRawIngest(request, env));
 
     if (url.pathname === '/ingest/replay' && request.method === 'POST')
-      return handleReplay(request, env);
+      return cors(await handleReplay(request, env));
 
     if (url.pathname === '/ingest/list' && request.method === 'GET')
-      return handleList(env);
+      return cors(await handleList(env));
 
     if (url.pathname === '/data/summary' && request.method === 'GET')
-      return handleSummary(env);
+      return cors(await handleSummary(env));
 
-    return Response.json(
+    return cors(Response.json(
       { error: 'Not found', path: url.pathname, method: request.method },
       { status: 404 }
-    );
+    ));
   },
 };
