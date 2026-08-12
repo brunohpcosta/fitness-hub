@@ -19,7 +19,7 @@
  *     network and simply fail.
  *  3. Absolute paths, so cache keys cannot depend on what resolved them.
  */
-const CACHE = 'fitness-hub-shell-v3.5.0-diet';
+const CACHE = 'fitness-hub-shell-v3.8.0-photos';
 
 const ASSETS = [
   '/',

@@ -712,6 +712,16 @@ async function handleToday(request, env) {
         }
       : null,
     freshness: await freshnessInfo(env, settings),
+    // A small slice of settings the front end needs to explain itself — the
+    // maintenance estimate in particular, so the Diet tab can say what a
+    // target means rather than just what it is.
+    settings: {
+      maintenance_kcal_estimate: settings.maintenance_kcal_estimate ?? null,
+      maintenance_basis: settings.maintenance_basis ?? null,
+      goal_weight_kg: settings.goal_weight_kg ?? null,
+      taper_starts: settings.taper_starts ?? null,
+      targets_review_due: settings.targets_review_due ?? null,
+    },
   });
 }
 
@@ -812,6 +822,201 @@ async function handleRuns(request, env) {
   }
 
   return Response.json({ ok: true, from, to, count: runs.length, runs, race_spike: spike });
+}
+
+/**
+ * Goals, with the current value computed rather than stored.
+ *
+ * A stored "current" goes stale silently, and this project has already been
+ * bitten once by a number that was true when written and wrong when read.
+ * Every value below is derived at request time, and anything that cannot be
+ * derived returns null so the app can show it as unavailable instead of zero.
+ */
+async function currentForMetric(env, key, date) {
+  const one = async (sql, ...binds) => (await env.DB.prepare(sql).bind(...binds).first());
+
+  switch (key) {
+    case 'weight_7d_avg': {
+      const r = await one(
+        `SELECT ROUND(AVG(weight_kg), 2) v, COUNT(*) n FROM v_daily_weight
+          WHERE local_date <= ? AND local_date > DATE(?, '-7 days')`, date, date);
+      return { value: r?.v ?? null, sample: r?.n ?? 0, sample_unit: 'days with a reading' };
+    }
+    case 'body_fat_14d_avg':
+    case 'lean_mass_14d_avg': {
+      const metric = key === 'body_fat_14d_avg' ? 'body_fat_pct' : 'lean_mass';
+      const r = await one(
+        `SELECT rolling_avg v, readings n, confidence FROM v_body_composition
+          WHERE metric = ? AND device = 'Withings' AND local_date <= ?
+          ORDER BY local_date DESC LIMIT 1`, metric, date);
+      return { value: r?.v ?? null, sample: r?.n ?? 0, sample_unit: 'readings in 14 days',
+               confidence: r?.confidence ?? null };
+    }
+    case 'run_km_7d': {
+      const r = await one(
+        `SELECT ROUND(SUM(distance_km), 1) v, COUNT(*) n FROM workouts
+          WHERE kind='run' AND deleted_at IS NULL AND local_date <= ? AND local_date > DATE(?, '-7 days')
+            AND (notes IS NULL OR notes NOT LIKE 'superseded%')`, date, date);
+      return { value: r?.v ?? 0, sample: r?.n ?? 0, sample_unit: 'runs' };
+    }
+    case 'runs_7d':
+    case 'strength_sessions_7d': {
+      const kind = key === 'runs_7d' ? 'run' : 'strength';
+      const r = await one(
+        `SELECT COUNT(*) v FROM workouts
+          WHERE kind = ? AND deleted_at IS NULL AND local_date <= ? AND local_date > DATE(?, '-7 days')
+            AND (notes IS NULL OR notes NOT LIKE 'superseded%')`, kind, date, date);
+      return { value: r?.v ?? 0, sample: 7, sample_unit: 'days' };
+    }
+    case 'steps_14d_avg': {
+      const r = await one(
+        `SELECT ROUND(AVG(steps)) v, COUNT(*) n FROM v_daily
+          WHERE steps IS NOT NULL AND local_date <= ? AND local_date > DATE(?, '-14 days')`, date, date);
+      return { value: r?.v ?? null, sample: r?.n ?? 0, sample_unit: 'days with data' };
+    }
+    case 'days_logged_7d': {
+      const r = await one(
+        `SELECT COUNT(*) v FROM daily_log WHERE local_date <= ? AND local_date > DATE(?, '-7 days')`,
+        date, date);
+      return { value: r?.v ?? 0, sample: 7, sample_unit: 'days' };
+    }
+    case 'days_on_macros_7d': {
+      // Uses v_daily.target_kcal, which is the 'default' day type — the view's
+      // join is hardcoded that way. Stated in the basis so it is not mistaken
+      // for a day-type-aware comparison.
+      const r = await one(
+        `SELECT COUNT(*) v FROM v_daily
+          WHERE local_date <= ? AND local_date > DATE(?, '-7 days')
+            AND energy_kcal IS NOT NULL AND target_kcal IS NOT NULL
+            AND ABS(energy_kcal - target_kcal) <= target_kcal * 0.10`, date, date);
+      return { value: r?.v ?? 0, sample: 7, sample_unit: 'days' };
+    }
+    case 'race_projection': {
+      const s = await settingsMap(env);
+      const raceKm = Number(s.race_distance_km ?? 0);
+      if (!raceKm) return { value: null, sample: 0 };
+      const { results } = await env.DB.prepare(
+        `SELECT distance_km, duration_min FROM workouts
+          WHERE kind='run' AND deleted_at IS NULL AND distance_km >= 15 AND duration_min IS NOT NULL
+            AND local_date > DATE(?, '-120 days')
+            AND (notes IS NULL OR notes NOT LIKE 'superseded%')`, date).all();
+      if (!results.length) return { value: null, sample: 0 };
+      const projections = results.map((r) => r.duration_min * Math.pow(raceKm / r.distance_km, 1.06));
+      return { value: Math.round(Math.min(...projections)), sample: results.length,
+               sample_unit: 'runs of 15 km or more' };
+    }
+    default:
+      return { value: null, sample: 0 };
+  }
+}
+
+async function handleGoals(request, env) {
+  const { searchParams } = new URL(request.url);
+  const date = safeDate(searchParams.get('date'), sydneyDate(new Date()));
+
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM goals WHERE active = 1 AND deleted_at IS NULL ORDER BY sort_order`
+  ).all();
+
+  const goals = [];
+  for (const g of results) {
+    const cur = await currentForMetric(env, g.metric_key, date);
+    let progress = null;
+    if (cur.value != null && g.target_value != null) {
+      if (g.direction === 'up') {
+        progress = Math.max(0, Math.min(100, (cur.value / g.target_value) * 100));
+      } else if (g.direction === 'down' && g.start_value != null) {
+        const span = g.start_value - g.target_value;
+        progress = span > 0
+          ? Math.max(0, Math.min(100, ((g.start_value - cur.value) / span) * 100))
+          : null;
+      } else if (g.direction === 'hold') {
+        progress = cur.value >= g.target_value ? 100 : (cur.value / g.target_value) * 100;
+      }
+    }
+    goals.push({
+      ...g,
+      current_value: cur.value,
+      sample: cur.sample,
+      sample_unit: cur.sample_unit ?? null,
+      confidence: cur.confidence ?? null,
+      progress_pct: progress == null ? null : Math.round(progress * 10) / 10,
+      // Distinguishes "no target set" from "target set but not measurable".
+      state: g.target_value == null ? 'tracked_only'
+           : cur.value == null ? 'no_data'
+           : 'ok',
+    });
+  }
+
+  return Response.json({ ok: true, date, count: goals.length, goals });
+}
+
+/**
+ * Progress photos.
+ *
+ * Served through the Worker rather than by presigned URL. The R2 Workers
+ * binding is not the S3-compatible API that presigning needs, so presigning
+ * would have meant creating R2 API tokens and storing them as secrets — more
+ * credentials to leak, for no benefit at 123 photos. Streaming through the
+ * Worker reuses the auth that already exists.
+ *
+ * Keys are expected as YYYY-MM-DD-view.jpg. Anything that does not match is
+ * still listed, with date and view null, rather than being hidden — an
+ * unparseable name is a thing to notice, not to swallow.
+ */
+function parsePhotoKey(key) {
+  const m = String(key).match(/(\d{4}-\d{2}-\d{2})[-_]?([a-zA-Z]*)/);
+  return {
+    key,
+    local_date: m ? m[1] : null,
+    view: m && m[2] ? m[2].toLowerCase() : null,
+  };
+}
+
+async function handlePhotoList(env) {
+  const out = [];
+  let cursor;
+  // R2 list is paginated; without the loop a bucket over the page size would
+  // silently show only the first slice.
+  do {
+    const page = await env.PHOTOS.list({ limit: 1000, cursor });
+    for (const o of page.objects) {
+      out.push({ ...parsePhotoKey(o.key), size: o.size, uploaded: o.uploaded });
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+
+  out.sort((a, b) => String(b.local_date).localeCompare(String(a.local_date)));
+
+  const dates = [...new Set(out.filter((p) => p.local_date).map((p) => p.local_date))];
+  const views = [...new Set(out.filter((p) => p.view).map((p) => p.view))];
+
+  return Response.json({
+    ok: true,
+    count: out.length,
+    dates,
+    views,
+    unparsed: out.filter((p) => !p.local_date).length,
+    photos: out,
+  });
+}
+
+async function handlePhoto(request, env) {
+  const { searchParams } = new URL(request.url);
+  const key = searchParams.get('key');
+  if (!key) return Response.json({ error: 'Missing ?key=' }, { status: 400 });
+
+  const obj = await env.PHOTOS.get(key);
+  if (!obj) return Response.json({ error: 'Not found', key }, { status: 404 });
+
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg',
+      'Content-Length': String(obj.size),
+      // Private: these must never be held by a shared cache.
+      'Cache-Control': 'private, max-age=3600',
+    },
+  });
 }
 
 /** Targets for a single date, day-type aware. v_daily cannot do this — its join is hardcoded to 'default'. */
@@ -1110,6 +1315,15 @@ export default {
 
     if (url.pathname === '/api/targets' && request.method === 'GET')
       return cors(await handleTargets(request, env));
+
+    if (url.pathname === '/api/goals' && request.method === 'GET')
+      return cors(await handleGoals(request, env));
+
+    if (url.pathname === '/api/photos' && request.method === 'GET')
+      return cors(await handlePhotoList(env));
+
+    if (url.pathname === '/api/photo' && request.method === 'GET')
+      return cors(await handlePhoto(request, env));
 
     if (url.pathname === '/api/log' && request.method === 'POST')
       return cors(await handleLog(request, env));

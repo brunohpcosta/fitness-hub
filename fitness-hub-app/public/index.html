@@ -51,7 +51,10 @@ h1{font-size:25px;font-weight:600;letter-spacing:-.025em;line-height:1.15;margin
 .rd.today .rl{color:var(--accent)}
 .rd .rs{display:block;font-size:12px;font-weight:500;color:var(--t2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rd.today .rs{color:var(--t1)}
+.rd .rkm{display:block;font-family:var(--mono);font-size:9.5px;color:var(--blue);margin-top:3px;min-height:13px;letter-spacing:-.02em}
+.rd.today .rkm{color:var(--accent)}
 .rd.past{opacity:.62}
+.btn.sm{padding:5px 10px;font-size:12px}
 #railnote{padding:0 18px 11px;font-size:11px;color:var(--t3)}
 
 #body{flex:1;display:flex}
@@ -145,6 +148,52 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 #gear svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .dot.ok{background:var(--green)} .dot.warn{background:var(--amber)} .dot.bad{background:var(--accent)}
 
+/* list rows — carried from the prototype, previously missing */
+.card.flush{padding:0;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none}
+.row.tap{cursor:pointer}
+.row.tap:hover{background:var(--s2)}
+.row.on{background:var(--accent-dim)}
+.row .rmain{flex:1;min-width:0}
+.row .rt{font-size:14px}
+.row .rsub{font-size:12px;color:var(--t2);margin-top:2px}
+.row .rval{font-size:13px;color:var(--t2);text-align:right;flex:none;font-family:var(--mono)}
+.row .rval b{color:var(--t1);font-weight:600}
+.row.missed .rt{color:var(--t2)}
+.pill{display:inline-block;font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.pill.red{background:rgba(250,17,79,.14);color:var(--accent)}
+.pill.green{background:rgba(46,204,155,.13);color:var(--green)}
+.pill.amber{background:rgba(255,176,32,.13);color:var(--amber)}
+.pill.blue{background:rgba(77,159,255,.13);color:var(--blue)}
+
+svg.chart{display:block;width:100%;height:auto;overflow:visible}
+.gridline{stroke:rgba(255,255,255,.06);stroke-width:1}
+.axlab{fill:#5e5e6c;font-size:9px;font-family:var(--mono)}
+.vbars{display:flex;align-items:flex-end;gap:5px;height:120px;margin-bottom:7px}
+.vbar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.vbar i{display:block;background:var(--blue);border-radius:3px 3px 0 0;min-height:2px}
+.vbar.now i{background:var(--accent)}
+.vlabels{display:flex;gap:5px}
+.vlabels span{flex:1;text-align:center;font-size:9.5px;color:var(--t3);line-height:1.3}
+.vval{text-align:center;font-size:10px;color:var(--t2);font-family:var(--mono);margin-bottom:3px}
+
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .cdow{font-size:9.5px;color:var(--t3);text-align:center;padding-bottom:5px;letter-spacing:.08em}
+.cd{aspect-ratio:1;border-radius:9px;background:var(--s2);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px;font-size:12.5px;color:var(--t2);
+    border:1px solid transparent;position:relative;overflow:hidden}
+.cd .cnum{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.cd .cdots{display:flex;gap:2.5px;height:5px}
+.cd .cdots i{width:5px;height:5px;border-radius:50%;display:block}
+.cd.today{border-color:var(--accent);color:var(--t1)}
+.cd.today .cnum{font-weight:600}
+.cd.future{opacity:.3}
+.cd.empty{background:transparent;border:1px dashed var(--line)}
+.callegend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;color:var(--t3);margin-top:12px}
+.callegend span{display:flex;align-items:center;gap:5px}
+.callegend i{width:6px;height:6px;border-radius:50%;display:block}
+
 .rblock{padding:10px 0;border-bottom:1px solid var(--line)}
 .rblock:last-of-type{border-bottom:none}
 .rlab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
@@ -221,8 +270,24 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
       <div class="card" id="hublog"></div>
     </section>
 
-    <section class="page" id="p-summary"></section>
-    <section class="page" id="p-training"></section>
+    <!-- SUMMARY -->
+    <section class="page" id="p-summary">
+      <div class="seg" id="sumseg">
+        <button class="on" onclick="setSumPeriod(7)">7 days</button>
+        <button onclick="setSumPeriod(28)">28 days</button>
+        <button onclick="setSumPeriod(90)">90 days</button>
+      </div>
+      <div class="grid g2 wide" id="sumtiles" style="margin-bottom:11px"></div>
+      <div class="seclab">calendar</div>
+      <div class="card" id="sumcal"></div>
+      <div class="seclab">compared with the period before</div>
+      <div class="card flush" id="sumcompare"></div>
+    </section>
+    <!-- TRAINING -->
+    <section class="page" id="p-training">
+      <div id="trainpicker"></div>
+      <div id="trainday"></div>
+    </section>
 
     <!-- RUNNING — the only tab with real function in step 1 -->
     <section class="page on" id="p-running">
@@ -333,8 +398,29 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
         </div>
       </div>
     </section>
-    <section class="page" id="p-body"></section>
-    <section class="page" id="p-goals"></section>
+    <!-- BODY -->
+    <section class="page" id="p-body">
+      <div class="grid g2 wide" id="bodytiles" style="margin-bottom:11px"></div>
+      <div class="cols">
+        <div>
+          <div class="seclab">weight</div>
+          <div class="card" id="bodychart"></div>
+        </div>
+        <div>
+          <div class="seclab">composition</div>
+          <div class="card" id="bodycomp"></div>
+          <div class="seclab">scale reliability</div>
+          <div class="card" id="bodycapture"></div>
+        </div>
+      </div>
+      <div class="seclab">photo comparison</div>
+      <div class="card" id="bodyphotos"></div>
+    </section>
+
+    <!-- GOALS -->
+    <section class="page" id="p-goals">
+      <div id="goalslist"></div>
+    </section>
 
   </main>
 </div>
@@ -616,21 +702,17 @@ function go(id){
   // request at 5am on a screen that is not being looked at.
   if(id==='running')loadRunning();
   if(id==='diet'){loadDiet();renderDiet();}
+  if(id==='training')renderTraining();
+  if(id==='body'){loadBody();renderBody();loadPhotos();}
+  if(id==='goals')loadGoals();
+  if(id==='summary'){loadSummary();renderSummary();}
   window.scrollTo(0,0);
 }
 
 /* ─────────────────────────── stubs ─────────────────────────── */
 /* Honest placeholders. Each names the step that connects it, so an empty tab
    never reads as a bug. */
-function buildStubs(){
-  TABS.forEach(function(t){
-    if(t[0]==='running'||t[0]==='hub'||t[0]==='diet')return;
-    $('p-'+t[0]).innerHTML=
-      '<div class="stub"><b>'+esc(t[2])+' is not connected yet</b>'+
-      'This tab arrives in <span class="num">'+esc(t[4])+'</span> of the Stage 4 build.<br>'+
-      'Nothing is broken — there is simply no read API behind it yet.</div>';
-  });
-}
+function buildStubs(){ /* every tab is built — nothing left to stub */ }
 
 /* ─────────────────────────── hub ─────────────────────────── */
 function n1(v){return (v==null||isNaN(v))?null:Math.round(v*10)/10;}
@@ -801,13 +883,53 @@ function ratingBlock(k,label,lo,hi){
          '<div class="hint"><span>1 · '+esc(lo)+'</span><span>'+esc(hi)+' · 5</span></div></div>';
 }
 
+var LOG_OPEN=false;   // set true by "Amend", or when nothing is logged yet
+function amendLog(){LOG_OPEN=true;renderLog();}
+function collapseLog(){LOG_OPEN=false;R={};renderLog();}
+
+/* Which check-in fields already hold something for this day. */
+function loggedFields(existing){
+  var out=[];
+  [['hours_slept','sleep'],['sleep_quality','sleep quality'],['fatigue','fatigue'],
+   ['soreness','soreness'],['stress','stress'],['session_effort','session effort'],
+   ['performance','performance'],['strength_feel','strength feel']].forEach(function(p){
+    if(existing[p[0]]!=null)out.push(p[1]);
+  });
+  return out;
+}
+
 function renderLog(){
   var el=$('hublog');
   if(!DATA){el.innerHTML='<div class="note">Connect to log.</div>';return;}
   LOGDATE=DATA.date;
 
   var existing=(DATA.actual)||{};
-  var h='<div class="ch"><span class="ct">'+esc(LOGDATE)+'</span>'+
+  var done=loggedFields(existing);
+  var queued=outboxGet().length;
+
+  // Already logged and not being amended — show a summary, not a form. There
+  // is no reason to look at ten empty rating rows at 5am on a day you have
+  // already filled in.
+  if(done.length&&!LOG_OPEN){
+    var bits=[];
+    if(existing.hours_slept!=null)bits.push(existing.hours_slept+' h sleep');
+    if(existing.sleep_quality!=null)bits.push('sleep '+existing.sleep_quality+'/5');
+    if(existing.fatigue!=null)bits.push('fatigue '+existing.fatigue+'/5');
+    if(existing.soreness!=null)bits.push('soreness '+existing.soreness+'/5');
+    if(existing.performance!=null)bits.push('performance '+existing.performance+'/5');
+    if(existing.weight_kg!=null)bits.push(n1(existing.weight_kg)+' kg');
+
+    el.innerHTML=
+      '<div class="ch"><span class="ct">Logged'+
+      '<span class="pill green">'+done.length+' field'+(done.length===1?'':'s')+'</span></span>'+
+      '<span class="cm num">'+esc(LOGDATE)+(queued?' · '+queued+' queued':'')+'</span></div>'+
+      '<div style="font-size:14px;color:var(--t2);line-height:1.7">'+esc(bits.join(' · '))+'</div>'+
+      (existing.notes?'<div class="note">'+esc(existing.notes)+'</div>':'')+
+      '<button class="btn f" style="margin-top:11px" onclick="amendLog()">Amend</button>';
+    return;
+  }
+
+  var h='<div class="ch"><span class="ct">'+(done.length?'Amending':'Check-in')+'</span>'+
         '<span class="cm num" id="logstate"></span></div>';
 
   h+='<div class="fieldrow"><label for="lg-wt">Weight kg</label>'+
@@ -831,15 +953,13 @@ function renderLog(){
   }
 
   h+='<button class="morebtn" onclick="toggleMore()">'+(MORE?'Fewer fields':'More fields')+'</button>';
-  h+='<button class="btn pri f" style="margin-top:9px" onclick="saveLog()">Save check-in</button>';
+  h+='<div style="display:flex;gap:8px;margin-top:9px">'+
+     '<button class="btn pri f" onclick="saveLog()">Save</button>'+
+     (done.length?'<button class="btn" onclick="collapseLog()">Cancel</button>':'')+
+     '</div>';
   h+='<div id="logmsg"></div>';
 
-  // Anything already stored for the day, so a partial save is visible.
-  var done=[];
-  ['hours_slept','sleep_quality','fatigue','soreness','performance','strength_feel'].forEach(function(k){
-    if(existing[k]!=null)done.push(k.replace(/_/g,' '));
-  });
-  if(done.length)h+='<div class="note">Already recorded for this day: '+esc(done.join(', '))+
+  if(done.length)h+='<div class="note">Already recorded: '+esc(done.join(', '))+
     '. Leaving a field blank keeps what is there — it does not clear it.</div>';
 
   el.innerHTML=h;
@@ -912,7 +1032,7 @@ function saveLog(){
 
   msg.innerHTML='<div class="info">Saving…</div>';
   postLog(payload).then(function(j){
-    R={};
+    R={}; LOG_OPEN=false;
     var extra=j.weight_note?('<div class="info" style="margin-top:8px">'+esc(j.weight_note)+'</div>'):'';
     msg.innerHTML='<div class="ok">Saved.</div>'+extra;
     refresh();
@@ -1010,6 +1130,518 @@ function daysToRace(){
   return Math.round((r-now)/86400000);
 }
 
+/* ─────────────────────────── summary ─────────────────────────── */
+var SUMDAYS=null, SUM_LOADED=false, SUMPERIOD=7;
+
+function loadSummary(){
+  if(SUM_LOADED||!CFG.url||!CFG.key)return;
+  SUM_LOADED=true;
+  api('/api/days?from='+isoOf(new Date(Date.now()-200*86400000))).then(function(j){
+    SUMDAYS=j.days||[]; renderSummary();
+  }).catch(function(){ SUM_LOADED=false; $('sumtiles').innerHTML='<div class="warn">Could not load.</div>'; });
+}
+function setSumPeriod(n){
+  SUMPERIOD=n;
+  document.querySelectorAll('#sumseg button').forEach(function(b,i){
+    b.classList.toggle('on',[7,28,90][i]===n);
+  });
+  renderSummary();
+}
+
+function windowDays(days,from,to){
+  return days.filter(function(d){return d.local_date>=from&&d.local_date<=to;});
+}
+function sumOf(rows,k){
+  var v=rows.map(function(r){return r[k];}).filter(function(x){return x!=null;});
+  return v.length?v.reduce(function(a,b){return a+b;},0):null;
+}
+function avgOf(rows,k){
+  var v=rows.map(function(r){return r[k];}).filter(function(x){return x!=null;});
+  return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:null;
+}
+
+function renderSummary(){
+  if(!SUMDAYS){$('sumtiles').innerHTML='';return;}
+  var today=isoOf(new Date());
+  var startCur=isoOf(new Date(Date.now()-(SUMPERIOD-1)*86400000));
+  var startPrev=isoOf(new Date(Date.now()-(SUMPERIOD*2-1)*86400000));
+  var endPrev=isoOf(new Date(Date.now()-SUMPERIOD*86400000));
+
+  var cur=windowDays(SUMDAYS,startCur,today);
+  var prev=windowDays(SUMDAYS,startPrev,endPrev);
+
+  $('sumtiles').innerHTML=
+    widget('Run distance', n1(sumOf(cur,'run_km')),' km', SUMPERIOD+' days')+
+    widget('Strength', sumOf(cur,'strength_sessions'),' sessions','')+
+    widget('Weight', n1(avgOf(cur,'weight_kg')),' kg',
+           cur.filter(function(d){return d.weight_kg!=null;}).length+' of '+SUMPERIOD+' days measured')+
+    widget('Steps, daily avg', n0(avgOf(cur,'steps')),'',
+           cur.filter(function(d){return d.steps!=null;}).length+' days with data');
+
+  // ── calendar ──
+  // Cells show what happened, and an empty cell means no data — not a zero.
+  var byDate={};
+  SUMDAYS.forEach(function(d){byDate[d.local_date]=d;});
+  var planByDate={};
+  (PLAN||[]).forEach(function(s){planByDate[s.local_date]=s;});
+
+  var start=new Date(Date.now()-(SUMPERIOD-1)*86400000);
+  var dow=start.getDay(); start.setDate(start.getDate()+(dow===0?-6:1-dow));  // back to Monday
+  var cells='', d=new Date(start);
+  var head=['M','T','W','T','F','S','S'].map(function(x){return '<div class="cdow">'+x+'</div>';}).join('');
+  while(d<=new Date()){
+    var k=isoOf(d), row=byDate[k], plan=planByDate[k];
+    var future=k>today;
+    var dots='';
+    if(row){
+      if(row.strength_sessions)dots+='<i style="background:var(--violet)"></i>';
+      if(row.run_km)dots+='<i style="background:var(--blue)"></i>';
+      if(row.energy_kcal!=null)dots+='<i style="background:var(--green)"></i>';
+    }
+    var cls='cd'+(k===today?' today':'')+(future?' future':'')+(!row&&!future?' empty':'');
+    cells+='<div class="'+cls+'" title="'+esc(k)+'">'+
+      '<span class="cnum">'+d.getDate()+'</span>'+
+      '<span class="cdots">'+dots+'</span></div>';
+    d.setDate(d.getDate()+1);
+  }
+  $('sumcal').innerHTML='<div class="cal">'+head+cells+'</div>'+
+    '<div class="callegend">'+
+    '<span><i style="background:var(--violet)"></i>strength</span>'+
+    '<span><i style="background:var(--blue)"></i>run</span>'+
+    '<span><i style="background:var(--green)"></i>intake logged</span></div>'+
+    '<div class="note">A day with no marks is a day with no data, not a day with nothing in it.</div>';
+
+  // ── comparison ──
+  var rows=[
+    ['Run distance', sumOf(cur,'run_km'), sumOf(prev,'run_km'), 'km', true],
+    ['Strength sessions', sumOf(cur,'strength_sessions'), sumOf(prev,'strength_sessions'), '', true],
+    ['Weight, average', avgOf(cur,'weight_kg'), avgOf(prev,'weight_kg'), 'kg', false],
+    ['Steps, daily average', avgOf(cur,'steps'), avgOf(prev,'steps'), '', true],
+    ['Energy, daily average', avgOf(cur,'energy_kcal'), avgOf(prev,'energy_kcal'), 'kcal', null],
+    ['Resting HR, average', avgOf(cur,'resting_hr'), avgOf(prev,'resting_hr'), 'bpm', false]
+  ];
+  $('sumcompare').innerHTML=rows.map(function(r){
+    var now=r[1], was=r[2];
+    if(now==null||was==null){
+      return '<div class="row"><div class="rmain"><div class="rt">'+esc(r[0])+'</div>'+
+        '<div class="rsub">not enough data to compare</div></div><div class="rval">—</div></div>';
+    }
+    var delta=now-was;
+    var pct=was!==0?(delta/was)*100:null;
+    var goodUp=r[4];
+    var tone = (goodUp===null||Math.abs(pct||0)<2) ? '' :
+               ((delta>0)===goodUp ? 'green' : 'amber');
+    var sign=delta>0?'+':'';
+    return '<div class="row"><div class="rmain"><div class="rt">'+esc(r[0])+'</div>'+
+      '<div class="rsub">was '+n1(was)+' '+esc(r[3])+'</div></div>'+
+      '<div class="rval"><b>'+n1(now)+'</b> '+esc(r[3])+
+      (pct!=null?'<br><span class="pill '+tone+'">'+sign+Math.round(pct)+'%</span>':'')+'</div></div>';
+  }).join('')+
+  '<div class="note" style="padding:12px 15px 14px">Previous period is the '+SUMPERIOD+
+  ' days immediately before this one. Averages use only days with data.</div>';
+}
+
+/* ─────────────────────────── training ─────────────────────────── */
+var TDAY=null;   // selected date; defaults to today
+
+/* Mobility is prescribed for every day in the current block — the plan document
+   says ten minutes of hip and ankle work on any day is worth doing. Held here
+   rather than in the database because it does not vary by day; when it does,
+   it moves into plan_exercises. */
+var MOBILITY=[
+  ['90/90 hip switches','2 min','Both directions, slow'],
+  ['Ankle dorsiflexion at a wall','2 min','Knee tracks over the toes, heel down'],
+  ['Couch stretch','2 min each side','Squeeze the glute to protect the lower back'],
+  ['Calf raises, slow','2 min','Bodyweight only during race week']
+];
+
+function setTDay(d){TDAY=d;renderTraining();}
+
+function renderTraining(){
+  var pick=$('trainpicker'), body=$('trainday');
+  if(!PLAN||!PLAN.length){
+    pick.innerHTML='';
+    body.innerHTML='<div class="stub"><b>No plan loaded</b>Connect, or the plan window has passed.</div>';
+    return;
+  }
+  var today=isoOf(new Date());
+  if(!TDAY||!PLAN.some(function(s){return s.local_date===TDAY;})){
+    TDAY = PLAN.some(function(s){return s.local_date===today;})
+      ? today
+      : (PLAN.filter(function(s){return s.local_date>=today;})[0]||PLAN[0]).local_date;
+  }
+
+  // Day strip — today marked, past days dimmed.
+  pick.innerHTML='<div id="rail" style="padding:2px 0 12px">'+PLAN.map(function(s){
+    var d=new Date(s.local_date+'T12:00:00');
+    var isToday=s.local_date===today, sel=s.local_date===TDAY, past=s.local_date<today;
+    return '<button class="rd'+(sel?' today':'')+(past?' past':'')+'" onclick="setTDay(\''+s.local_date+'\')" '+
+      'style="cursor:pointer;background:none">'+
+      '<span class="rl">'+DAYS[d.getDay()].toUpperCase()+(isToday?' •':'')+'</span>'+
+      '<span class="rs">'+d.getDate()+'</span>'+
+      '<span class="rkm">'+esc(s.is_rest?'rest':(s.session_type==='race'?'RACE':(s.run_km_max||s.run_km_min?((s.run_km_max||s.run_km_min)+'k'):'gym')))+'</span>'+
+      '</button>';
+  }).join('')+'</div>';
+
+  var s=PLAN.filter(function(x){return x.local_date===TDAY;})[0];
+  var isToday=s.local_date===today;
+
+  var h='<div class="card"'+(isToday?' style="border-color:rgba(250,17,79,.45)"':'')+'>'+
+    '<div class="ch"><span class="ct">'+esc(s.day_label)+
+    (isToday?'<span class="pill red">today</span>':'')+'</span>'+
+    '<span class="cm num">'+esc(fmtDate(s.local_date))+'</span></div>';
+
+  if(s.is_rest){
+    h+='<div class="ok">Rest day. Nothing scheduled — that is the session.</div>';
+  }
+
+  if(s.run_km_min!=null){
+    var km=(s.run_km_max&&s.run_km_max!==s.run_km_min)?(s.run_km_min+'–'+s.run_km_max):s.run_km_min;
+    h+='<div class="grid g2" style="margin-bottom:10px">'+
+       '<div class="tile"><div class="tl">Distance</div><div class="tv num">'+esc(km+' km')+'</div></div>'+
+       '<div class="tile"><div class="tl">Pace</div><div class="tv num" style="font-size:15px">'+
+       esc(s.run_pace_note||'—')+'</div></div></div>';
+    if(s.run_hr_note)h+='<div class="info">Heart rate: '+esc(s.run_hr_note)+'</div>';
+  }
+
+  if(s.gym_note)h+='<div class="info">'+esc(s.gym_note)+'</div>';
+
+  if(s.exercises&&s.exercises.length){
+    h+='<div class="seclab" style="margin:14px 0 2px">exercises</div>';
+    s.exercises.forEach(function(e){
+      h+='<div class="exc"><div class="eh"><span class="en">'+esc(e.exercise)+'</span>'+
+         '<span class="eset">'+esc(e.sets_reps)+'</span></div>'+
+         (e.note?'<div class="enote">'+esc(e.note)+'</div>':'')+'</div>';
+    });
+  }
+
+  if(s.fuel_note)h+='<div class="ok" style="margin-top:11px"><b>Fuelling.</b> '+esc(s.fuel_note)+'</div>';
+  if(s.targets){
+    h+='<div class="note"><b>Nutrition today:</b> '+n0(s.targets.energy_kcal)+' kcal · '+
+       n0(s.targets.protein_g)+' P · '+n0(s.targets.carbs_g)+' C · '+n0(s.targets.fat_g)+' F'+
+       (s.targets.fell_back?' (general target for the period)':'')+'</div>';
+  }
+  if(s.why)h+='<div class="note"><b>Why this session:</b> '+esc(s.why)+'</div>';
+  h+='</div>';
+
+  // Mobility — shown on every day, race day excepted.
+  if(s.session_type!=='race'){
+    h+='<div class="seclab">mobility · 10 minutes, any time</div><div class="card">'+
+       MOBILITY.map(function(m){
+         return '<div class="exc"><div class="eh"><span class="en">'+esc(m[0])+'</span>'+
+                '<span class="eset">'+esc(m[1])+'</span></div>'+
+                '<div class="enote">'+esc(m[2])+'</div></div>';
+       }).join('')+
+       '<div class="note">Optional but worth doing. Hip and ankle range is what the knee ends up paying for.</div></div>';
+  }
+
+  // Race-week reminders, only where they apply.
+  var tips=[];
+  if(s.session_type==='race'){
+    tips.push('Start slower than feels right. The first 3 km should feel too easy.');
+    tips.push('Gel every 20 minutes from the 20-minute mark, water with every one.');
+    tips.push('Nothing new. Same shoes, same socks, same gels as the rehearsal.');
+  }else if(s.local_date==='2026-08-15'){
+    tips.push('This is a dress rehearsal, not a training run. Same kit, same gels, same caffeine split.');
+    tips.push('Log how your gut felt at 30, 60, 90 and 120 minutes — that decides your race-day rate.');
+    tips.push('If 65 g/h causes problems, drop to 55–60 for the race. There is no time for a second experiment.');
+  }else if(!s.is_rest&&s.gym_note){
+    tips.push('Upper body only. No squats, deadlifts, leg press, lunges or calf work.');
+    tips.push('Cut sets, keep the load. Stop well short of failure.');
+    tips.push('No new exercises during race week, ever.');
+  }
+  if(tips.length){
+    h+='<div class="seclab">for this session</div><div class="card">'+
+       tips.map(function(t){return '<div class="ok" style="margin-bottom:8px">'+esc(t)+'</div>';}).join('')+
+       '</div>';
+  }
+
+  h+='<div class="note" style="margin:0 2px">Sets and reps are the prescription, not a record of what you lifted. '+
+     'Per-exercise load history needs the Hevy integration, which is a later stage.</div>';
+
+  body.innerHTML=h;
+}
+
+/* ─────────────────────────── body ─────────────────────────── */
+var BODYDAYS=null, BODY_LOADED=false;
+
+function loadBody(){
+  if(BODY_LOADED||!CFG.url||!CFG.key)return;
+  BODY_LOADED=true;
+  api('/api/days?from='+isoOf(new Date(Date.now()-180*86400000))).then(function(j){
+    BODYDAYS=j.days||[]; renderBody();
+  }).catch(function(){ BODY_LOADED=false; $('bodychart').innerHTML='<div class="warn">Could not load.</div>'; });
+}
+
+/* Minimal SVG line chart. Gaps are breaks in the line, never interpolated —
+   a missing weigh-in is not a weight. */
+function sparkline(points,goal){
+  if(!points.length)return '<div class="note">No readings.</div>';
+  var W=320,H=110,pad=6;
+  var vals=points.map(function(p){return p.v;});
+  var lo=Math.min.apply(null,vals.concat(goal?[goal]:[]));
+  var hi=Math.max.apply(null,vals.concat(goal?[goal]:[]));
+  if(hi-lo<1){hi+=0.5;lo-=0.5;}
+  var x=function(i){return pad+(i/(points.length-1||1))*(W-pad*2);};
+  var y=function(v){return pad+(1-(v-lo)/(hi-lo))*(H-pad*2);};
+
+  var d='',open=false;
+  points.forEach(function(p,i){
+    if(p.v==null){open=false;return;}
+    d+=(open?'L':'M')+x(i).toFixed(1)+' '+y(p.v).toFixed(1)+' ';
+    open=true;
+  });
+  var goalLine=goal?('<line x1="'+pad+'" y1="'+y(goal).toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y(goal).toFixed(1)+
+    '" stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3"/>'):'';
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:110px">'+
+    goalLine+'<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="1.6" '+
+    'stroke-linejoin="round" stroke-linecap="round"/></svg>'+
+    '<div class="tlx"><span class="num">'+lo.toFixed(1)+'</span><span class="num">'+hi.toFixed(1)+'</span></div>';
+}
+
+function renderBody(){
+  if(!BODYDAYS){$('bodytiles').innerHTML='';return;}
+  var wt=BODYDAYS.filter(function(d){return d.weight_kg!=null;});
+  var recent=wt.slice(0,7);
+  var avg7=recent.length?recent.reduce(function(a,d){return a+d.weight_kg;},0)/recent.length:null;
+  var goal=(DATA&&DATA.race)?76:76;
+
+  var bf=(DATA&&DATA.body_composition||[]).filter(function(b){return b.metric==='body_fat_pct';})[0]||null;
+  var lm=(DATA&&DATA.body_composition||[]).filter(function(b){return b.metric==='lean_mass';})[0]||null;
+
+  $('bodytiles').innerHTML=
+    widget('Weight, 7-day', n1(avg7),' kg', recent.length+' of 7 days measured')+
+    widget('To goal', avg7!=null?n1(avg7-76):null,' kg','target 76.0')+
+    widget('Body fat', bf?n1(bf.rolling_avg):null,' %', bf?(bf.readings+' readings · '+bf.confidence):'no reading')+
+    widget('Lean mass', lm?n1(lm.rolling_avg):null,' kg', lm?(lm.device):'no reading');
+
+  // Chart: oldest first, gaps preserved.
+  var series=BODYDAYS.slice().reverse().map(function(d){return {d:d.local_date,v:d.weight_kg};});
+  $('bodychart').innerHTML=sparkline(series,76)+
+    '<div class="note">180 days. Breaks in the line are days with no reading — never interpolated. '+
+    'The dashed line is the 76 kg goal.</div>';
+
+  $('bodycomp').innerHTML=
+    (bf?('<div class="mrow"><div class="mh"><span>Body fat</span><b class="num">'+n1(bf.rolling_avg)+'%</b></div></div>'):'')+
+    (lm?('<div class="mrow"><div class="mh"><span>Lean mass</span><b class="num">'+n1(lm.rolling_avg)+' kg</b></div></div>'):'')+
+    '<div class="warn" style="margin-top:9px"><b>14-day rolling averages, one device only.</b> '+
+    'Withings and Zepp Life disagreed by about 9 percentage points measuring the same body, '+
+    'so these are never plotted across the device boundary. Individual readings swing about '+
+    '1.4 kg of lean mass day to day — only the average carries information.</div>';
+
+  // Capture rate: how often the scale actually recorded, by month.
+  var byMonth={};
+  BODYDAYS.forEach(function(d){
+    var m=d.local_date.slice(0,7);
+    byMonth[m]=byMonth[m]||{days:0,weighed:0};
+    byMonth[m].days++;
+    if(d.weight_kg!=null)byMonth[m].weighed++;
+  });
+  var months=Object.keys(byMonth).sort().reverse().slice(0,6);
+  $('bodycapture').innerHTML=months.map(function(m){
+    var r=byMonth[m], pct=Math.round(100*r.weighed/r.days);
+    return '<div class="mrow"><div class="mh"><span>'+esc(m)+'</span><b>'+r.weighed+' of '+r.days+' days · '+pct+'%</b></div>'+
+      '<div class="bar"><i style="width:'+pct+'%;background:'+(pct<70?'var(--amber)':'var(--green)')+'"></i></div></div>';
+  }).join('')+
+  '<div class="note">A low month is a scale that did not record, not a body that did not exist. '+
+  'Capture dropped sharply from July — impedance draws far more current than the load cell, so a '+
+  'failing battery shows up here first. The batteries have not been changed.</div>';
+}
+
+/* ─────────────────────────── photos ─────────────────────────── */
+/* An <img src> cannot carry an Authorization header, so images are fetched in
+   JS and turned into blob URLs. The alternative — a token in the URL — would
+   put the key into browser history and any referrer. Blob URLs are revoked
+   when replaced so they do not accumulate. */
+var PHOTOS=null, PHOTOS_LOADED=false, PVIEW=null, PLEFT=null, PRIGHT=null;
+var BLOBS={};
+
+function loadPhotos(){
+  if(PHOTOS_LOADED||!CFG.url||!CFG.key)return;
+  PHOTOS_LOADED=true;
+  api('/api/photos').then(function(j){
+    PHOTOS=j;
+    PVIEW=(j.views&&j.views.length)?j.views[0]:null;
+    var ds=datesForView(PVIEW);
+    PRIGHT=ds[0]||null; PLEFT=ds[ds.length-1]||null;
+    renderPhotos();
+  }).catch(function(){
+    PHOTOS_LOADED=false;
+    $('bodyphotos').innerHTML='<div class="warn">Could not load photos.</div>';
+  });
+}
+
+function datesForView(view){
+  if(!PHOTOS)return [];
+  return PHOTOS.photos
+    .filter(function(p){return p.local_date&&(!view||p.view===view);})
+    .map(function(p){return p.local_date;})
+    .filter(function(v,i,a){return a.indexOf(v)===i;})
+    .sort().reverse();
+}
+function keyFor(date,view){
+  if(!PHOTOS)return null;
+  var m=PHOTOS.photos.filter(function(p){
+    return p.local_date===date&&(!view||p.view===view);
+  })[0];
+  return m?m.key:null;
+}
+
+function showPhoto(slot,key){
+  var el=$('ph-'+slot);
+  if(!el)return;
+  if(!key){el.innerHTML='<div class="note">No photo for that date.</div>';return;}
+  el.innerHTML='<div class="note">Loading…</div>';
+  fetch(CFG.url+'/api/photo?key='+encodeURIComponent(key),{
+    headers:{'Authorization':'Bearer '+CFG.key}
+  }).then(function(r){
+    if(!r.ok)throw new Error('http '+r.status);
+    return r.blob();
+  }).then(function(b){
+    if(BLOBS[slot])URL.revokeObjectURL(BLOBS[slot]);
+    BLOBS[slot]=URL.createObjectURL(b);
+    el.innerHTML='<img src="'+BLOBS[slot]+'" alt="" style="width:100%;border-radius:var(--r);display:block">';
+  }).catch(function(){
+    el.innerHTML='<div class="warn">Could not load that image.</div>';
+  });
+}
+
+function setPView(v){
+  PVIEW=v;
+  var ds=datesForView(v);
+  PRIGHT=ds[0]||null; PLEFT=ds[ds.length-1]||null;
+  renderPhotos();
+}
+function setPSide(side,date){
+  if(side==='l')PLEFT=date; else PRIGHT=date;
+  renderPhotos();
+}
+
+/* Measurements for a date, so the comparison is not purely visual. */
+function statsFor(date){
+  if(!BODYDAYS)return null;
+  return BODYDAYS.filter(function(d){return d.local_date===date;})[0]||null;
+}
+function statLine(date){
+  var s=statsFor(date);
+  if(!s)return '<div class="note">No measurements recorded that day.</div>';
+  var bits=[];
+  if(s.weight_kg!=null)bits.push(n1(s.weight_kg)+' kg');
+  if(s.body_fat_pct!=null)bits.push(n1(s.body_fat_pct)+'% fat');
+  if(s.lean_mass_kg!=null)bits.push(n1(s.lean_mass_kg)+' kg lean');
+  return bits.length
+    ? '<div class="note">'+esc(bits.join(' · '))+'</div>'
+    : '<div class="note">No measurements recorded that day.</div>';
+}
+
+function renderPhotos(){
+  var el=$('bodyphotos');
+  if(!PHOTOS){el.innerHTML='<div class="note">Loading…</div>';return;}
+
+  if(!PHOTOS.count){
+    el.innerHTML='<div class="stub"><b>No photos uploaded yet</b>'+
+      'Run <span class="num">scripts/upload-photos.sh</span> to put them in R2. '+
+      'They are served through the API behind your key — never public.</div>';
+    return;
+  }
+
+  var dates=datesForView(PVIEW);
+  var views=PHOTOS.views||[];
+
+  var h='';
+  if(views.length>1){
+    h+='<div class="seg">'+views.map(function(v){
+      return '<button class="'+(v===PVIEW?'on':'')+'" onclick="setPView(\''+esc(v)+'\')">'+esc(v)+'</button>';
+    }).join('')+'</div>';
+  }
+
+  var opts=function(sel){
+    return dates.map(function(d){
+      return '<option value="'+d+'"'+(d===sel?' selected':'')+'>'+esc(fmtDate(d))+'</option>';
+    }).join('');
+  };
+
+  h+='<div class="cols" style="gap:11px">'+
+     '<div><select onchange="setPSide(\'l\',this.value)" style="margin-bottom:8px">'+opts(PLEFT)+'</select>'+
+     '<div id="ph-l"></div>'+statLine(PLEFT)+'</div>'+
+     '<div><select onchange="setPSide(\'r\',this.value)" style="margin-bottom:8px">'+opts(PRIGHT)+'</select>'+
+     '<div id="ph-r"></div>'+statLine(PRIGHT)+'</div>'+
+     '</div>';
+
+  // Difference between the two, if both have measurements.
+  var a=statsFor(PLEFT), b=statsFor(PRIGHT);
+  if(a&&b&&a.weight_kg!=null&&b.weight_kg!=null){
+    var dw=b.weight_kg-a.weight_kg;
+    var days=Math.round((new Date(PRIGHT)-new Date(PLEFT))/86400000);
+    h+='<div class="info" style="margin-top:11px">'+(dw>0?'+':'')+n1(dw)+' kg over '+Math.abs(days)+' days'+
+       (days?(' · '+(dw/(Math.abs(days)/7)).toFixed(2)+' kg per week'):'')+'</div>';
+  }
+
+  h+='<div class="note">'+PHOTOS.count+' photos across '+PHOTOS.dates.length+' dates'+
+     (PHOTOS.unparsed?(' · '+PHOTOS.unparsed+' with names that could not be read'):'')+
+     '. Photos are private: fetched with your key and held only in this tab.</div>'+
+     '<div class="note">Judge these against each other, not against a number. '+
+     'Body-fat estimation from photographs was tried and rejected — a relative comparison is honest, a percentage from an image is not.</div>';
+
+  el.innerHTML=h;
+  showPhoto('l',keyFor(PLEFT,PVIEW));
+  showPhoto('r',keyFor(PRIGHT,PVIEW));
+}
+
+/* ─────────────────────────── goals ─────────────────────────── */
+var GOALS=null, GOALS_LOADED=false;
+
+function loadGoals(){
+  if(GOALS_LOADED||!CFG.url||!CFG.key)return;
+  GOALS_LOADED=true;
+  api('/api/goals').then(function(j){ GOALS=j.goals||[]; renderGoals(); })
+    .catch(function(){ GOALS_LOADED=false; $('goalslist').innerHTML='<div class="warn">Could not load goals.</div>'; });
+}
+
+function renderGoals(){
+  var el=$('goalslist');
+  if(!GOALS){el.innerHTML='<div class="note">Loading…</div>';return;}
+  var cats=[['body','body'],['training','training'],['habit','habits'],['race','race']];
+  el.innerHTML=cats.map(function(c){
+    var gs=GOALS.filter(function(g){return g.category===c[0];});
+    if(!gs.length)return '';
+    return '<div class="seclab">'+esc(c[1])+'</div>'+gs.map(goalCard).join('');
+  }).join('')+
+  '<div class="note" style="margin:0 2px">Every current value is computed from logged data at the moment you open this. '+
+  'Nothing is stored — a saved figure goes stale silently. A goal with no data behind it says so rather than showing zero.</div>';
+}
+
+function goalCard(g){
+  var h='<div class="card"><div class="ch"><span class="ct">'+esc(g.name)+'</span>';
+
+  if(g.state==='tracked_only'){
+    h+='<span class="cm">no target set</span></div>'+
+       '<div class="tv num" style="font-size:25px">'+(g.current_value!=null?n1(g.current_value):'—')+
+       '<small style="font-size:13px;color:var(--t2);margin-left:4px">'+esc(g.unit||'')+'</small></div>';
+  }else if(g.state==='no_data'){
+    h+='<span class="cm">unavailable</span></div>'+
+       '<div class="warn">No data behind this goal yet.</div>';
+  }else{
+    h+='<span class="cm num">target '+n1(g.target_value)+' '+esc(g.unit||'')+'</span></div>'+
+       '<div class="tv num" style="font-size:28px;margin-bottom:9px">'+n1(g.current_value)+
+       '<small style="font-size:13px;color:var(--t2);margin-left:4px">'+esc(g.unit||'')+'</small></div>';
+    if(g.progress_pct!=null){
+      var good=g.progress_pct>=100;
+      h+='<div class="bar"><i style="width:'+Math.min(100,g.progress_pct)+'%;background:'+
+         (good?'var(--green)':'var(--accent)')+'"></i></div>'+
+         '<div class="hint"><span>'+(g.start_value!=null?('from '+n1(g.start_value)):'')+'</span>'+
+         '<span>'+Math.round(g.progress_pct)+'%</span></div>';
+    }
+  }
+  if(g.sample!=null&&g.sample_unit){
+    h+='<div class="note">Based on '+g.sample+' '+esc(g.sample_unit)+
+       (g.confidence?(' · confidence '+esc(g.confidence)):'')+'.</div>';
+  }
+  if(g.basis)h+='<div class="note">'+esc(g.basis)+'</div>';
+  if(g.review_due)h+='<div class="note">Review due '+esc(g.review_due)+'.</div>';
+  return h+'</div>';
+}
+
 /* ─────────────────────────── diet ─────────────────────────── */
 var DAYS14=null, DIET_LOADED=false;
 
@@ -1074,13 +1706,20 @@ function renderDietAhead(){
 
   el.innerHTML=rows.map(function(s){
     var t=s.targets;
+    var isToday=s.local_date===today;
+    var pills='';
+    if(isToday)pills+='<span class="pill blue">today</span>';
+    if(t&&t.carbs_g>=500)pills+='<span class="pill amber">carb load</span>';
+    if(s.session_type==='race')pills+='<span class="pill red">race</span>';
+    if(t&&t.fell_back)pills+='<span class="pill">general</span>';
+
     var right = t
-      ? '<span class="rv"><b class="num">'+n0(t.energy_kcal)+'</b> kcal · '+n0(t.carbs_g)+' C</span>'
-      : '<span class="rv">no target</span>';
-    var load = (t&&t.carbs_g>=500)?' · carb load':'';
-    return '<div class="row"><div class="rmain">'+
-      '<div class="rt">'+esc(fmtDate(s.local_date))+'</div>'+
-      '<div class="rsub">'+esc(s.day_label+' · '+(s.day_type||'')+(t&&t.fell_back?' (general)':'')+load)+'</div>'+
+      ? '<div class="rval"><b>'+n0(t.energy_kcal)+'</b> kcal<br>'+n0(t.carbs_g)+' C · '+n0(t.protein_g)+' P</div>'
+      : '<div class="rval">no target</div>';
+
+    return '<div class="row'+(isToday?' on':'')+'"><div class="rmain">'+
+      '<div class="rt">'+esc(fmtDate(s.local_date))+pills+'</div>'+
+      '<div class="rsub">'+esc(s.day_label)+'</div>'+
       '</div>'+right+'</div>';
   }).join('')+
   '<div class="note" style="padding:12px 15px 14px">Targets after 22 August expire deliberately, to force a review rather than let a race-week block roll on.</div>';
@@ -1089,30 +1728,60 @@ function renderDietAhead(){
 function renderDietHistory(){
   var el=$('diethistory');
   if(!DAYS14){el.innerHTML='<div class="note">Loading…</div>';return;}
-  var withIntake=DAYS14.filter(function(d){return d.energy_kcal!=null;});
-  if(!withIntake.length){
-    el.innerHTML='<div class="warn"><b>No intake recorded in the last 14 days.</b> '+
-      'Cronometer data reaches D1 only if Health Auto Export is exporting the dietary metrics '+
-      'and the Worker routes them into nutrition_intake. Both are needed.</div>';
-    return;
+
+  // Every one of the last 14 calendar days, whether or not there is data —
+  // otherwise a missing day silently disappears instead of being visible as a
+  // gap, which is the whole point of showing it.
+  var byDate={};
+  DAYS14.forEach(function(d){byDate[d.local_date]=d;});
+  var days=[];
+  for(var i=0;i<14;i++){
+    var dt=new Date(); dt.setDate(dt.getDate()-i);
+    var k=isoOf(dt);
+    days.push({date:k,row:byDate[k]||null});
   }
+
+  var withIntake=days.filter(function(d){return d.row&&d.row.energy_kcal!=null;});
   var avg=function(k){
-    var v=withIntake.map(function(d){return d[k];}).filter(function(x){return x!=null;});
+    var v=withIntake.map(function(d){return d.row[k];}).filter(function(x){return x!=null;});
     return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:null;
   };
-  el.innerHTML=
+
+  var head=
     '<div class="grid g2" style="margin-bottom:11px">'+
-    '<div class="tile"><div class="tl">Days logged</div><div class="tv num">'+withIntake.length+' / 14</div></div>'+
-    '<div class="tile"><div class="tl">Avg energy</div><div class="tv num">'+n0(avg('energy_kcal'))+'</div><div class="tsub">kcal</div></div>'+
-    '<div class="tile"><div class="tl">Avg protein</div><div class="tv num">'+n0(avg('protein_g'))+'</div><div class="tsub">g</div></div>'+
-    '<div class="tile"><div class="tl">Avg carbs</div><div class="tv num">'+n0(avg('carbs_g'))+'</div><div class="tsub">g</div></div>'+
-    '</div>'+
-    withIntake.slice(0,10).map(function(d){
-      return '<div class="exc"><div class="eh"><span class="en">'+esc(fmtDate(d.local_date))+'</span>'+
-        '<span class="eset">'+n0(d.energy_kcal)+' kcal</span></div>'+
-        '<div class="enote">'+n0(d.protein_g)+' P · '+n0(d.carbs_g)+' C · '+n0(d.fat_g)+' F</div></div>';
-    }).join('')+
-    '<div class="note">Averages cover only the days with intake recorded. Days with no entry are excluded rather than counted as zero — a missing log is not a fast.</div>';
+    '<div class="tile"><div class="tl">Days logged</div><div class="tv num">'+withIntake.length+' / 14</div>'+
+    (withIntake.length<14?'<div class="tsub">'+(14-withIntake.length)+' missing</div>':'')+'</div>'+
+    '<div class="tile"><div class="tl">Avg energy</div><div class="tv num">'+
+      (withIntake.length?n0(avg('energy_kcal')):'—')+'</div><div class="tsub">kcal, logged days only</div></div>'+
+    '<div class="tile"><div class="tl">Avg protein</div><div class="tv num">'+
+      (withIntake.length?n0(avg('protein_g')):'—')+'</div><div class="tsub">g</div></div>'+
+    '<div class="tile"><div class="tl">Avg carbs</div><div class="tv num">'+
+      (withIntake.length?n0(avg('carbs_g')):'—')+'</div><div class="tsub">g</div></div>'+
+    '</div>';
+
+  var list=days.map(function(d){
+    if(!d.row||d.row.energy_kcal==null){
+      return '<div class="row missed"><div class="rmain">'+
+        '<div class="rt">'+esc(fmtDate(d.date))+'<span class="pill red">not logged</span></div>'+
+        '</div><div class="rval">—</div></div>';
+    }
+    var r=d.row;
+    var tgt=r.target_kcal;
+    var pill='';
+    if(tgt){
+      var off=Math.abs(r.energy_kcal-tgt)/tgt;
+      pill=off<=0.10?'<span class="pill green">on target</span>'
+          :(r.energy_kcal<tgt?'<span class="pill amber">under</span>':'<span class="pill amber">over</span>');
+    }
+    return '<div class="row"><div class="rmain">'+
+      '<div class="rt">'+esc(fmtDate(d.date))+pill+'</div>'+
+      '<div class="rsub">'+n0(r.protein_g)+' P · '+n0(r.carbs_g)+' C · '+n0(r.fat_g)+' F</div>'+
+      '</div><div class="rval"><b>'+n0(r.energy_kcal)+'</b> kcal</div></div>';
+  }).join('');
+
+  el.innerHTML=head+'<div class="card flush" style="margin:0 -16px -15px;border:none;border-top:1px solid var(--line);border-radius:0">'+list+'</div>'+
+    '<div class="note" style="margin-top:14px">Averages cover only the days with intake recorded — a day with no entry is a gap, not a zero. '+
+    'On-target means within 10% of that day general target.</div>';
 }
 
 /* Client-side arithmetic. Deliberately not stored: this is a thinking tool,
@@ -1125,14 +1794,36 @@ function renderDietRatio(){
   if(!t){el.innerHTML='<div class="note">No target to adjust.</div>';return;}
   var def=(typeof RATIO_DEF==='undefined')?0:RATIO_DEF;
   var kcal=t.energy_kcal+def;
+
+  // What the day's target already implies, relative to estimated maintenance.
+  // The "ideal" is not something this tool invents — it is the target already
+  // set in the database, and the job here is to explain what that target means
+  // rather than to propose a different one.
+  var maint=(DATA&&DATA.settings&&Number(DATA.settings.maintenance_kcal_estimate))||2200;
+  var implied=t.energy_kcal-maint;
+  var raceDays=(DATA&&DATA.race&&DATA.race.days_to);
+  var idealNote;
+  if(raceDays!=null&&raceDays>=0&&raceDays<=10){
+    idealNote='<div class="ok"><b>Ideal right now is the target as set: '+n0(t.energy_kcal)+' kcal.</b> '+
+      'That is '+(implied>=0?'+':'')+n0(implied)+' against your estimated maintenance of '+n0(maint)+
+      '. No deficit before the run — deliberate, and worth protecting. Two days at maintenance-plus '+
+      'will not undo eleven weeks of work.</div>';
+  }else{
+    idealNote='<div class="info"><b>Target as set: '+n0(t.energy_kcal)+' kcal</b>, which is '+
+      (implied>=0?'+':'')+n0(implied)+' against estimated maintenance of '+n0(maint)+' kcal. '+
+      'Maintenance is derived from your own weight change against logged intake, and logged intake '+
+      'is thought to under-report by 10–30%, so treat it as an estimate rather than a measurement.</div>';
+  }
   var p=t.protein_g, f=t.fat_g, c;
   if(BAL==='p'){ p=Math.max(0,Math.round((kcal-t.carbs_g*4-t.fat_g*9)/4)); c=t.carbs_g; }
   else if(BAL==='f'){ f=Math.max(0,Math.round((kcal-t.carbs_g*4-t.protein_g*4)/9)); c=t.carbs_g; }
   else { c=Math.max(0,Math.round((kcal-t.protein_g*4-t.fat_g*9)/4)); }
 
   el.innerHTML=
-    '<div class="sl"><span>Adjust energy</span><b class="num">'+(def>0?'+':'')+def+' kcal</b></div>'+
+    idealNote+
+    '<div class="sl" style="margin-top:11px"><span>Adjust from target</span><b class="num">'+(def>0?'+':'')+def+' kcal</b></div>'+
     '<input type="range" id="ratio-def" min="-900" max="900" step="25" value="'+def+'" oninput="setRatio(this.value)">'+
+    (def!==0?'<div class="hint"><span>target '+n0(t.energy_kcal)+'</span><span><button class="btn sm" onclick="setRatio(0)">back to target</button></span></div>':'')+
     '<div style="font-size:11px;color:var(--t2);margin:9px 0 6px">Which macro absorbs the change</div>'+
     '<div class="seg"><button class="'+(BAL==='p'?'on':'')+'" onclick="setBal(\'p\')">Protein</button>'+
     '<button class="'+(BAL==='c'?'on':'')+'" onclick="setBal(\'c\')">Carbs</button>'+
@@ -1247,16 +1938,36 @@ function renderRunning(){
     'a guess presented as a measurement, so they are shown as absent instead.</div>';
 
   // ── weekly load ──
-  var wk=weeklyKm(RUNS,10);
+  // Vertical bars with plain-language labels. The previous version showed raw
+  // week-start dates, which told you nothing about when "08-10" was.
+  var wk=weeklyKm(RUNS,8);
   var maxKm=Math.max.apply(null,wk.map(function(w){return w.km;}).concat([1]));
-  var bars=wk.map(function(w){
-    var pct=(w.km/maxKm)*100;
-    var isThis=w.week===isoOf(new Date(new Date().setDate(new Date().getDate()-((new Date().getDay()||7)-1))));
-    return '<div class="mrow"><div class="mh"><span>'+esc(w.week.slice(5))+'</span><b>'+w.km+' km</b></div>'+
-           '<div class="bar"><i style="width:'+pct.toFixed(1)+'%;background:'+(isThis?'var(--accent)':'var(--blue)')+'"></i></div></div>';
+  var vals=wk.map(function(w){return '<div class="vval">'+(w.km||'')+'</div>';});
+  var bars=wk.map(function(w,i){
+    var isThis=(i===wk.length-1);
+    return '<div class="vbar'+(isThis?' now':'')+'" title="'+esc(w.week)+'">'+
+           '<i style="height:'+Math.max(2,(w.km/maxKm)*100).toFixed(1)+'%"></i></div>';
   }).join('');
-  $('loadcard').innerHTML=bars+
-    '<div class="note">Monday-start weeks. Superseded rows excluded, so the Strava duplicates no longer double-count.</div>';
+  var labels=wk.map(function(w,i){
+    var back=wk.length-1-i;
+    var lab = back===0?'this<br>week' : back===1?'last<br>week' : back+'<br>wks ago';
+    return '<span>'+lab+'</span>';
+  }).join('');
+
+  var thisWk=wk[wk.length-1].km, lastWk=wk[wk.length-2]?wk[wk.length-2].km:null;
+  var avg8=wk.reduce(function(a,w){return a+w.km;},0)/wk.length;
+
+  $('loadcard').innerHTML=
+    '<div class="ch"><span class="ct">'+thisWk+' km<span style="font-size:12px;color:var(--t2);font-weight:400"> this week</span></span>'+
+    '<span class="cm num">8-week avg '+Math.round(avg8)+' km</span></div>'+
+    '<div style="display:flex;gap:5px;margin-bottom:2px">'+vals.join('')+'</div>'+
+    '<div class="vbars">'+bars+'</div>'+
+    '<div class="vlabels">'+labels+'</div>'+
+    (lastWk!=null&&lastWk>0
+      ? '<div class="note">'+(thisWk<lastWk?'Down ':'Up ')+Math.abs(Math.round((thisWk/lastWk-1)*100))+
+        '% on last week'+(race.days_to!=null&&race.days_to<=14?' — which is what a taper should look like.':'.')+'</div>'
+      : '')+
+    '<div class="note">Kilometres per Monday-start week. Superseded rows excluded, so the Strava duplicates no longer double-count.</div>';
 
   // ── race projection ──
   var longs=RUNS.filter(function(r){return r.distance_km>=15&&r.pace_sec_per_km;});
