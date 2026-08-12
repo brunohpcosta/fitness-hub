@@ -170,13 +170,75 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .gridline{stroke:rgba(255,255,255,.06);stroke-width:1}
 .axlab{fill:#5e5e6c;font-size:9px;font-family:var(--mono)}
-.vbars{display:flex;align-items:flex-end;gap:5px;height:120px;margin-bottom:7px}
-.vbar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
-.vbar i{display:block;background:var(--blue);border-radius:3px 3px 0 0;min-height:2px}
-.vbar.now i{background:var(--accent)}
-.vlabels{display:flex;gap:5px}
-.vlabels span{flex:1;text-align:center;font-size:9.5px;color:var(--t3);line-height:1.3}
-.vval{text-align:center;font-size:10px;color:var(--t2);font-family:var(--mono);margin-bottom:3px}
+/* Bar chart as a grid, not flex. All three rows share the same column
+   template, so values, bars and labels cannot drift apart — which is exactly
+   what happened when the value row was flex without flex:1 and the numbers
+   collapsed to the left. */
+.chartgrid{display:grid;gap:4px}
+.chartgrid .cv{text-align:center;font-size:10px;color:var(--t2);font-family:var(--mono);
+  white-space:nowrap;overflow:hidden}
+.chartgrid .cb{height:110px;display:flex;flex-direction:column;justify-content:flex-end}
+.chartgrid .cb i{display:block;background:var(--blue);border-radius:3px 3px 0 0;min-height:3px;
+  transition:height .3s cubic-bezier(.22,1,.36,1)}
+.chartgrid .cb.now i{background:var(--accent)}
+.chartgrid .cl{text-align:center;font-size:9px;color:var(--t3);line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chartgrid .cl.now{color:var(--accent)}
+
+/* modal */
+#modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+  padding:18px;background:rgba(0,0,0,.66);backdrop-filter:blur(7px)}
+#modal.open{display:flex;animation:fadeIn .18s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+#modalcard{background:var(--s1);border:1px solid var(--line2);border-radius:20px;max-width:440px;
+  width:100%;max-height:86vh;overflow-y:auto;padding:20px;
+  animation:modalIn .26s cubic-bezier(.22,1,.36,1) both}
+#modalcard .mh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
+#modalcard .mt{font-size:19px;font-weight:600;letter-spacing:-.02em}
+#modalcard .msub{font-size:12px;color:var(--t3);margin-top:2px}
+.mnav{display:flex;gap:5px;align-items:center;flex:none}
+.mnav button{width:30px;height:30px;border-radius:50%;background:var(--s3);color:var(--t2);
+  font-size:14px;line-height:1;transition:background .14s,color .14s}
+.mnav button:hover{background:var(--line2);color:var(--t1)}
+.mblock{border-radius:var(--r);background:var(--s2);padding:12px 13px;margin-bottom:9px}
+.mblock .mbh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mblock .mbh i{width:7px;height:7px;border-radius:50%;display:block;flex:none}
+.mblock .mbh span{font-size:12px;color:var(--t2);letter-spacing:.03em}
+.mblock .mbv{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.mblock .mbd{font-size:12px;color:var(--t2);margin-top:5px;line-height:1.55}
+.mstack{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:9px}
+.mstack i{display:block;height:100%}
+.mmac{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+.mmac .mmr{display:flex;justify-content:space-between;font-size:11.5px;color:var(--t2)}
+.mmac .mmr b{font-family:var(--mono);font-weight:400;color:var(--t1)}
+.fbgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:2px}
+.fbbox{background:var(--s1);border:1px solid var(--line);border-radius:9px;padding:9px 9px 8px}
+.fbbox .fbl{font-size:10px;color:var(--t3);line-height:1.3;min-height:26px}
+.fbbox .fbv{font-size:17px;font-weight:600;letter-spacing:-.02em;font-family:var(--mono);margin-top:2px}
+.fbbox .fbv small{font-size:10px;color:var(--t3);font-weight:400;margin-left:1px}
+.fbdots{display:flex;gap:2px;margin-top:6px}
+.fbdots i{flex:1;height:3px;border-radius:2px;background:var(--s3)}
+body.locked{overflow:hidden}
+
+/* calendar month stats */
+.calhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
+.calhead .cmn{font-size:16px;font-weight:600;letter-spacing:-.02em}
+.calhead .cmy{font-size:11px;color:var(--t3);margin-top:1px}
+.calnav{display:flex;gap:4px}
+.calnav button{width:30px;height:30px;border-radius:8px;color:var(--t2);font-size:15px;line-height:1;
+  background:var(--s2);transition:background .14s,color .14s}
+.calnav button:hover{background:var(--s3);color:var(--t1)}
+.calnav button:disabled{opacity:.3;cursor:default}
+.calstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px}
+.calstat{background:var(--s2);border-radius:9px;padding:9px 10px}
+.calstat .csl{font-size:10px;color:var(--t3);margin-bottom:3px}
+.calstat .csv{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.cd .cheat{position:absolute;inset:0;pointer-events:none}
+.cd.tap{cursor:pointer;transition:transform .16s cubic-bezier(.34,1.4,.64,1),border-color .14s}
+.cd.tap:hover{transform:translateY(-2px) scale(1.07);border-color:var(--line2);z-index:2;color:var(--t1)}
+.cd.miss::after{content:'';position:absolute;top:5px;right:5px;width:4px;height:4px;border-radius:50%;
+  background:var(--accent);z-index:1}
 
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal .cdow{font-size:9.5px;color:var(--t3);text-align:center;padding-bottom:5px;letter-spacing:.08em}
@@ -253,21 +315,25 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
   <main id="main">
 
     <!-- HUB — the 5am screen -->
-    <section class="page" id="p-hub">
+    <!-- Order is deliberate: at 5am the first question is what you are doing
+         today, not what you weighed. Session, then fuel, then the numbers,
+         then the log. -->
+    <section class="page on" id="p-hub">
       <div id="hubstate"></div>
-      <div class="grid g2 wide" id="widgets" style="margin-bottom:11px"></div>
       <div class="cols">
         <div>
-          <div class="seclab">today's session</div>
+          <div class="seclab" id="hubsesslab">today's session</div>
           <div class="card" id="hubsession"></div>
+          <div class="seclab">daily check-in</div>
+          <div class="card" id="hublog"></div>
         </div>
         <div>
           <div class="seclab">intake vs target</div>
           <div class="card" id="hubmacros"></div>
+          <div class="seclab">today at a glance</div>
+          <div class="grid g2" id="widgets"></div>
         </div>
       </div>
-      <div class="seclab">daily check-in</div>
-      <div class="card" id="hublog"></div>
     </section>
 
     <!-- SUMMARY -->
@@ -278,8 +344,25 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
         <button onclick="setSumPeriod(90)">90 days</button>
       </div>
       <div class="grid g2 wide" id="sumtiles" style="margin-bottom:11px"></div>
-      <div class="seclab">calendar</div>
-      <div class="card" id="sumcal"></div>
+      <div class="seclab">calendar · tap any day</div>
+      <div class="card">
+        <div class="calhead">
+          <div><div class="cmn" id="calmonth"></div><div class="cmy" id="calsub"></div></div>
+          <div class="calnav">
+            <button onclick="shiftMonth(-1)" aria-label="Previous month">‹</button>
+            <button onclick="shiftMonth(1)" id="calnext" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="calstats" id="calstats"></div>
+        <div class="cal" id="calgrid"></div>
+        <div class="callegend">
+          <span><i style="background:var(--violet)"></i>strength</span>
+          <span><i style="background:var(--blue)"></i>run</span>
+          <span><i style="background:var(--green)"></i>intake logged</span>
+          <span><i style="background:var(--accent)"></i>no check-in</span>
+        </div>
+        <div class="note">Cell shading shows relative training load for that day. An unshaded cell is a day with no data, not a day with nothing in it.</div>
+      </div>
       <div class="seclab">compared with the period before</div>
       <div class="card flush" id="sumcompare"></div>
     </section>
@@ -290,17 +373,13 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
     </section>
 
     <!-- RUNNING — the only tab with real function in step 1 -->
-    <section class="page on" id="p-running">
+    <section class="page" id="p-running">
 
       <div class="seclab">race</div>
       <div class="card">
         <div class="ch"><span class="ct" id="racename">Solo 42.195 km</span><span class="cm num" id="racecount"></span></div>
-        <div class="grid g3">
-          <div class="tile"><div class="tl">Date</div><div class="tv num" id="racedate">22 Aug</div><div class="tsub">Saturday</div></div>
-          <div class="tile"><div class="tl">Target</div><div class="tv num">sub-4h</div><div class="tsub">5:41/km</div></div>
-          <div class="tile"><div class="tl">Fuel rate</div><div class="tv num">65 g/h</div><div class="tsub">not 90 — see below</div></div>
-        </div>
-        <div class="note">These defaults mirror <span class="num">settings</span> in D1 (<span class="num">race_date</span>, <span class="num">race_fuel_g_per_hour</span>, <span class="num">race_gel_carbs_g</span>, <span class="num">race_target_minutes</span>). They are hardcoded here only because step 1 has no API yet — step 4 reads them live so this screen can never drift from the database.</div>
+        <div class="grid g3" id="racetiles"></div>
+        <div class="note" id="racenote"></div>
       </div>
 
       <div class="seclab">current form</div>
@@ -309,8 +388,8 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 
       <div class="cols">
         <div>
-          <div class="seclab">recent runs</div>
-          <div class="card" id="runlist"></div>
+          <div class="seclab">recent runs · tap for detail</div>
+          <div class="card flush" id="runlist"></div>
         </div>
         <div>
           <div class="seclab">weekly distance</div>
@@ -426,6 +505,10 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 </div>
 </div>
 <nav id="nav"></nav>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modaltitle" onclick="if(event.target===this)closeModal()">
+  <div id="modalcard"></div>
+</div>
 
 <!-- settings sheet — API address and key live here, in localStorage -->
 <div id="sheet">
@@ -817,8 +900,12 @@ function renderSession(){
     when=DAYS[d.getDay()]+' '+d.getDate()+' '+
          ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
   }
-  var h='<div class="ch"><span class="ct">'+esc(p.day_label)+'</span>'+
-        '<span class="cm num">'+esc(ahead?('next · '+when):p.session_type)+'</span></div>';
+  var lab=$('hubsesslab');
+  if(lab)lab.textContent=ahead?'next session':"today's session";
+
+  var h='<div class="ch"><span class="ct">'+esc(p.day_label)+
+        (ahead?'':'<span class="pill red">today</span>')+'</span>'+
+        '<span class="cm num">'+esc(ahead?when:p.session_type)+'</span></div>';
   if(ahead){
     h+='<div class="info">Nothing scheduled for today. This is your next session.</div>';
   }
@@ -1130,6 +1217,262 @@ function daysToRace(){
   return Math.round((r-now)/86400000);
 }
 
+/* ─────────────────────────── charts ─────────────────────────── */
+/**
+ * Vertical bar chart. Values, bars and labels are three rows of one grid with
+ * the same column count, so they cannot drift out of alignment — which is what
+ * happened when the value row was flex without flex:1 and every number piled
+ * up on the left.
+ *
+ * A zero renders as a visible baseline rather than nothing, so an empty week
+ * reads as "zero" instead of "missing".
+ */
+function barChart(items,opt){
+  opt=opt||{};
+  var dp=opt.decimals==null?1:opt.decimals;
+  var max=Math.max.apply(null,items.map(function(i){return i.value||0;}).concat([0.0001]));
+  var cols='grid-template-columns:repeat('+items.length+',minmax(0,1fr))';
+
+  var vals=items.map(function(i){
+    return '<div class="cv">'+(i.value?i.value.toFixed(dp):'')+'</div>';
+  }).join('');
+  var bars=items.map(function(i){
+    var pct=i.value?Math.max(3,(i.value/max)*100):0;
+    return '<div class="cb'+(i.now?' now':'')+'" title="'+esc(i.title||'')+'">'+
+           '<i style="height:'+pct.toFixed(1)+'%"></i></div>';
+  }).join('');
+  var labs=items.map(function(i){
+    return '<div class="cl'+(i.now?' now':'')+'">'+esc(i.label)+'</div>';
+  }).join('');
+
+  return '<div class="chartgrid" style="'+cols+'">'+vals+bars+labs+'</div>';
+}
+
+/* ─────────────────────────── modal ─────────────────────────── */
+function openModal(html){
+  $('modalcard').innerHTML=html;
+  $('modal').classList.add('open');
+  document.body.classList.add('locked');
+}
+function closeModal(){
+  $('modal').classList.remove('open');
+  document.body.classList.remove('locked');
+}
+
+/* ─────────────────────────── calendar ─────────────────────────── */
+var MONTHS=['January','February','March','April','May','June','July',
+            'August','September','October','November','December'];
+var calY=new Date().getFullYear(), calM=new Date().getMonth();
+
+function shiftMonth(n){
+  calM+=n;
+  if(calM<0){calM=11;calY--;}
+  if(calM>11){calM=0;calY++;}
+  renderCal();
+}
+
+/* A single number standing for how hard a day was, used only to shade cells
+   relative to each other within the month. Deliberately crude: 45 for a
+   strength session, ~4 per km run. It ranks days, it does not measure them. */
+function dayLoad(d){
+  if(!d)return 0;
+  return (d.strength_sessions?45*d.strength_sessions:0)+((d.run_km||0)*4.2);
+}
+
+function calDays(){
+  var by={};
+  (SUMDAYS||[]).forEach(function(d){by[d.local_date]=d;});
+  return by;
+}
+
+function renderCal(){
+  var by=calDays(), today=isoOf(new Date());
+  $('calmonth').textContent=MONTHS[calM];
+  $('calsub').textContent=calY;
+
+  // No navigating past the current month — there is nothing there.
+  var nextBtn=$('calnext');
+  if(nextBtn){
+    var atNow=(calY===new Date().getFullYear()&&calM===new Date().getMonth());
+    nextBtn.disabled=atNow;
+  }
+
+  var first=new Date(calY,calM,1);
+  var lead=(first.getDay()+6)%7;                 // Monday-first offset
+  var dim=new Date(calY,calM+1,0).getDate();     // days in month
+
+  // Month totals, from days that actually have data.
+  var km=0,sess=0,runs=0,logged=0,withData=0,loads=[];
+  for(var q=1;q<=dim;q++){
+    var kk=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(q).padStart(2,'0');
+    var aa=by[kk]; if(!aa)continue;
+    withData++;
+    if(aa.strength_sessions)sess+=aa.strength_sessions;
+    if(aa.run_km){runs++;km+=aa.run_km;}
+    if(aa.energy_kcal!=null)logged++;
+    loads.push(dayLoad(aa));
+  }
+  var maxLoad=loads.length?Math.max.apply(null,loads):1;
+
+  $('calstats').innerHTML=[
+    ['Distance', km?Math.round(km)+' km':'—'],
+    ['Sessions', withData?sess:'—'],
+    ['Runs', withData?runs:'—'],
+    ['Intake', withData?(logged+'/'+withData):'—']
+  ].map(function(s){
+    return '<div class="calstat"><div class="csl">'+s[0]+'</div><div class="csv num">'+s[1]+'</div></div>';
+  }).join('');
+
+  var h=['M','T','W','T','F','S','S'].map(function(d){return '<div class="cdow">'+d+'</div>';}).join('');
+  for(var i=0;i<lead;i++)h+='<div class="cd empty"></div>';
+
+  for(var day=1;day<=dim;day++){
+    var k=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    var a=by[k], future=k>today, dots='', heat='', cls='';
+    if(a){
+      if(a.strength_sessions)dots+='<i style="background:var(--violet)"></i>';
+      if(a.run_km)dots+='<i style="background:var(--blue)"></i>';
+      if(a.energy_kcal!=null)dots+='<i style="background:var(--green)"></i>';
+      if(a.hours_slept==null&&a.sleep_quality==null&&!future)cls+=' miss';
+      var lv=dayLoad(a)/(maxLoad||1);
+      if(lv>0){
+        var op=(0.07+lv*0.26).toFixed(3);
+        var col=(a.run_km&&a.strength_sessions)
+          ? 'linear-gradient(135deg,rgba(155,123,255,'+op+'),rgba(77,159,255,'+op+'))'
+          : a.run_km
+            ? 'rgba(77,159,255,'+op+')'
+            : 'rgba(155,123,255,'+op+')';
+        heat='<span class="cheat" style="background:'+col+'"></span>';
+      }
+    }
+    h+='<button class="cd tap'+(k===today?' today':'')+(future?' future':'')+cls+'" '+
+       'onclick="dayModal(\''+k+'\')" aria-label="'+k+'">'+heat+
+       '<span class="cnum">'+day+'</span><span class="cdots">'+dots+'</span></button>';
+  }
+  $('calgrid').innerHTML=h;
+}
+
+function shiftDay(k,n){
+  var d=new Date(k+'T12:00:00'); d.setDate(d.getDate()+n); return isoOf(d);
+}
+
+function dotRow(v,colour){
+  var s='';
+  for(var i=1;i<=5;i++)s+='<i style="'+(v&&i<=v?('background:'+colour):'')+'"></i>';
+  return s;
+}
+
+function dayModal(k){
+  var by=calDays(), a=by[k], d=new Date(k+'T12:00:00'), today=isoOf(new Date());
+  var when = k===today?'today':(k>today?'upcoming':'past');
+  var plan=(PLAN||[]).filter(function(s){return s.local_date===k;})[0];
+
+  var head='<div class="mh"><div><div class="mt" id="modaltitle">'+
+    DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()].toLowerCase()+'</div>'+
+    '<div class="msub">'+when+(plan?(' · '+esc(plan.day_label.toLowerCase())):'')+'</div></div>'+
+    '<div class="mnav">'+
+      '<button onclick="dayModal(\''+shiftDay(k,-1)+'\')" aria-label="Previous day">‹</button>'+
+      '<button onclick="dayModal(\''+shiftDay(k,1)+'\')" aria-label="Next day">›</button>'+
+      '<button onclick="closeModal()" aria-label="Close">✕</button>'+
+    '</div></div>';
+
+  if(!a){
+    openModal(head+
+      '<div class="mblock"><div class="mbd">No data recorded for this day. It is excluded from '+
+      'every average rather than counted as zero.</div></div>'+
+      (plan?('<div class="mblock"><div class="mbh"><i style="background:var(--accent)"></i>'+
+        '<span>Planned</span></div><div class="mbv">'+esc(plan.day_label)+'</div>'+
+        (plan.why?'<div class="mbd">'+esc(plan.why)+'</div>':'')+'</div>'):'')+
+      '<button class="btn f" style="width:100%" onclick="closeModal()">Close</button>');
+    return;
+  }
+
+  var b='';
+
+  if(a.strength_sessions){
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--violet)"></i><span>Strength</span></div>'+
+      '<div class="mbv">'+a.strength_sessions+' session'+(a.strength_sessions===1?'':'s')+'</div>'+
+      (a.volume_kg?'<div class="mbd num">'+n0(a.volume_kg).toLocaleString()+' kg total volume</div>':'')+
+      '</div>';
+  }
+  if(a.run_km){
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--blue)"></i><span>Run</span></div>'+
+      '<div class="mbv num">'+n1(a.run_km)+' km</div>'+
+      '<div class="mbd">Per-kilometre splits are not captured — route data has never been stored.</div></div>';
+  }
+  if(!a.strength_sessions&&!a.run_km){
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--t3)"></i><span>No session</span></div>'+
+      '<div class="mbd">Nothing recorded for this day.</div></div>';
+  }
+
+  if(a.weight_kg!=null||a.body_fat_pct!=null){
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--teal)"></i><span>Body</span></div>'+
+      '<div class="mbv num">'+(a.weight_kg!=null?n1(a.weight_kg)+' kg':'—')+'</div>'+
+      '<div class="mbd">'+(a.weight_source?('via '+esc(a.weight_source)):'')+
+      (a.body_fat_pct!=null?(' · '+n1(a.body_fat_pct)+'% body fat'):'')+'</div></div>';
+  }
+
+  if(a.steps!=null){
+    var pct=Math.min(100,a.steps/10000*100);
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--green)"></i><span>Steps</span></div>'+
+      '<div class="mbv num">'+n0(a.steps).toLocaleString()+'</div>'+
+      '<div class="bar" style="margin-top:8px"><i style="width:'+pct+'%;background:var(--green)"></i></div>'+
+      '<div class="mbd">'+Math.round(pct)+'% of the 10,000 goal</div></div>';
+  }
+
+  if(a.energy_kcal!=null){
+    var p=a.protein_g||0, c=a.carbs_g||0, f=a.fat_g||0;
+    var tot=p*4+c*4+f*9;
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--amber)"></i><span>Nutrition</span></div>'+
+      '<div class="mbv num">'+n0(a.energy_kcal).toLocaleString()+
+        '<small style="font-size:11px;color:var(--t3);font-weight:400;margin-left:3px">kcal</small></div>'+
+      (tot>0?('<div class="mstack">'+
+        '<i style="width:'+(p*4/tot*100).toFixed(1)+'%;background:var(--blue)"></i>'+
+        '<i style="width:'+(c*4/tot*100).toFixed(1)+'%;background:var(--green);margin:0 2px"></i>'+
+        '<i style="width:'+(f*9/tot*100).toFixed(1)+'%;background:var(--amber)"></i></div>'):'')+
+      '<div class="mmac">'+
+        '<div class="mmr"><span style="color:var(--blue)">Protein</span><b>'+n0(p)+
+          (a.target_protein_g?(' / '+n0(a.target_protein_g)):'')+' g</b></div>'+
+        '<div class="mmr"><span style="color:var(--green)">Carbs</span><b>'+n0(c)+
+          (a.target_carbs_g?(' / '+n0(a.target_carbs_g)):'')+' g</b></div>'+
+        '<div class="mmr"><span style="color:var(--amber)">Fat</span><b>'+n0(f)+
+          (a.target_fat_g?(' / '+n0(a.target_fat_g)):'')+' g</b></div>'+
+      '</div>'+
+      (a.target_kcal?('<div class="mbd">Target '+n0(a.target_kcal).toLocaleString()+' kcal · '+
+        (a.energy_kcal>a.target_kcal?'+':'')+n0(a.energy_kcal-a.target_kcal)+' on the day</div>'):'')+
+      '</div>';
+  }else{
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--accent)"></i><span>Nutrition</span></div>'+
+      '<div class="mbv">Not logged</div>'+
+      '<div class="mbd">Excluded from averages rather than counted as zero.</div></div>';
+  }
+
+  var cats=[['Sleep quality',a.sleep_quality,'var(--violet)'],['Performance',a.performance,'var(--green)'],
+            ['Session effort',a.fatigue,'var(--amber)'],['Soreness',a.soreness,'var(--accent)'],
+            ['Stress',a.stress,'var(--blue)'],['Strength feel',a.strength_feel,'var(--teal)']];
+  var anyRating=cats.some(function(c){return c[1]!=null;})||a.hours_slept!=null;
+
+  if(anyRating){
+    b+='<div class="mblock" style="margin-bottom:14px"><div class="mbh"><i style="background:var(--green)"></i>'+
+      '<span>Check-in</span></div>'+
+      (a.hours_slept!=null?('<div class="mbv num">'+a.hours_slept+
+        '<small style="font-size:11px;color:var(--t3);font-weight:400;margin-left:4px">h slept</small></div>'):'')+
+      '<div class="fbgrid">'+cats.filter(function(c){return c[1]!=null;}).map(function(c){
+        return '<div class="fbbox"><div class="fbl">'+esc(c[0])+'</div>'+
+          '<div class="fbv" style="color:'+c[2]+'">'+c[1]+'<small>/5</small></div>'+
+          '<div class="fbdots">'+dotRow(c[1],c[2])+'</div></div>';
+      }).join('')+'</div>'+
+      (a.notes?'<div class="mbd">'+esc(a.notes)+'</div>':'')+'</div>';
+  }else{
+    b+='<div class="mblock" style="margin-bottom:14px"><div class="mbh"><i style="background:var(--accent)"></i>'+
+      '<span>Check-in</span></div><div class="mbv">Not logged</div>'+
+      '<div class="mbd">Nothing recorded — excluded from averages rather than counted as zero.</div></div>';
+  }
+
+  b+='<button class="btn f" style="width:100%" onclick="closeModal()">Close</button>';
+  openModal(head+b);
+}
+
 /* ─────────────────────────── summary ─────────────────────────── */
 var SUMDAYS=null, SUM_LOADED=false, SUMPERIOD=7;
 
@@ -1178,38 +1521,7 @@ function renderSummary(){
     widget('Steps, daily avg', n0(avgOf(cur,'steps')),'',
            cur.filter(function(d){return d.steps!=null;}).length+' days with data');
 
-  // ── calendar ──
-  // Cells show what happened, and an empty cell means no data — not a zero.
-  var byDate={};
-  SUMDAYS.forEach(function(d){byDate[d.local_date]=d;});
-  var planByDate={};
-  (PLAN||[]).forEach(function(s){planByDate[s.local_date]=s;});
-
-  var start=new Date(Date.now()-(SUMPERIOD-1)*86400000);
-  var dow=start.getDay(); start.setDate(start.getDate()+(dow===0?-6:1-dow));  // back to Monday
-  var cells='', d=new Date(start);
-  var head=['M','T','W','T','F','S','S'].map(function(x){return '<div class="cdow">'+x+'</div>';}).join('');
-  while(d<=new Date()){
-    var k=isoOf(d), row=byDate[k], plan=planByDate[k];
-    var future=k>today;
-    var dots='';
-    if(row){
-      if(row.strength_sessions)dots+='<i style="background:var(--violet)"></i>';
-      if(row.run_km)dots+='<i style="background:var(--blue)"></i>';
-      if(row.energy_kcal!=null)dots+='<i style="background:var(--green)"></i>';
-    }
-    var cls='cd'+(k===today?' today':'')+(future?' future':'')+(!row&&!future?' empty':'');
-    cells+='<div class="'+cls+'" title="'+esc(k)+'">'+
-      '<span class="cnum">'+d.getDate()+'</span>'+
-      '<span class="cdots">'+dots+'</span></div>';
-    d.setDate(d.getDate()+1);
-  }
-  $('sumcal').innerHTML='<div class="cal">'+head+cells+'</div>'+
-    '<div class="callegend">'+
-    '<span><i style="background:var(--violet)"></i>strength</span>'+
-    '<span><i style="background:var(--blue)"></i>run</span>'+
-    '<span><i style="background:var(--green)"></i>intake logged</span></div>'+
-    '<div class="note">A day with no marks is a day with no data, not a day with nothing in it.</div>';
+  renderCal();
 
   // ── comparison ──
   var rows=[
@@ -1714,7 +2026,8 @@ function renderDietAhead(){
     if(t&&t.fell_back)pills+='<span class="pill">general</span>';
 
     var right = t
-      ? '<div class="rval"><b>'+n0(t.energy_kcal)+'</b> kcal<br>'+n0(t.carbs_g)+' C · '+n0(t.protein_g)+' P</div>'
+      ? '<div class="rval"><b>'+n0(t.energy_kcal)+'</b> kcal<br>'+
+        n0(t.protein_g)+'P · '+n0(t.carbs_g)+'C · '+n0(t.fat_g)+'F</div>'
       : '<div class="rval">no target</div>';
 
     return '<div class="row'+(isToday?' on':'')+'"><div class="rmain">'+
@@ -1784,6 +2097,85 @@ function renderDietHistory(){
     'On-target means within 10% of that day general target.</div>';
 }
 
+/**
+ * The ideal daily energy, derived from your own numbers rather than a rule of
+ * thumb: current weight, goal weight, the maintenance estimate, the phase goal,
+ * and how close the race is.
+ *
+ * Rate of loss is capped at 0.5% of bodyweight per week. That is the widely
+ * used ceiling for preserving lean mass while losing fat; going faster costs
+ * muscle, which is the opposite of the point.
+ *
+ * Returns null values rather than guesses when the inputs are missing.
+ */
+function idealEnergy(){
+  var s=(DATA&&DATA.settings)||{};
+  var maint=Number(s.maintenance_kcal_estimate)||null;
+  var goalW=Number(s.goal_weight_kg)||null;
+  var curW=(DATA&&DATA.actual&&DATA.actual.weight_kg)||null;
+  var raceDays=(DATA&&DATA.race&&DATA.race.days_to);
+  var phase=(DATA&&DATA.actual&&DATA.actual.phase_goal)||null;
+
+  if(!maint)return {kcal:null,reason:'No maintenance estimate in settings.'};
+
+  // Race first — it overrides the deficit regardless of the phase.
+  if(raceDays!=null&&raceDays>=0&&raceDays<=10){
+    return {kcal:maint,mode:'race',raceDays:raceDays,maint:maint,
+      reason:'No deficit inside the last ten days before the run. A fortnight either side is '+
+             'worth about 0.3 kg at your measured rate — not worth arriving under-fuelled for.'};
+  }
+
+  if(phase==='fat_loss'&&goalW&&curW&&curW>goalW){
+    var rateKg=Math.min(0.5*curW/100, (curW-goalW)/4);   // %BW cap, and ease off near the goal
+    var deficit=Math.round((rateKg*7700)/7);             // ~7,700 kcal per kg of fat
+    return {kcal:maint-deficit,mode:'cut',maint:maint,deficit:deficit,rate:rateKg,
+      toGo:curW-goalW,curW:curW,goalW:goalW,
+      reason:'Deficit sized for '+rateKg.toFixed(2)+' kg per week, capped at 0.5% of bodyweight '+
+             'to protect lean mass.'};
+  }
+
+  if(phase==='fat_loss'&&goalW&&curW&&curW<=goalW){
+    return {kcal:maint,mode:'reached',maint:maint,curW:curW,goalW:goalW,
+      reason:'You are at or under the goal weight. Maintenance until the next phase is set.'};
+  }
+
+  return {kcal:maint,mode:'maintain',maint:maint,
+    reason:'No active fat-loss phase, so maintenance is the reference.'};
+}
+
+function idealExplain(ideal,t){
+  if(ideal.kcal==null)return '<div class="warn">'+esc(ideal.reason)+'</div>';
+
+  var diff=t?Math.round(t.energy_kcal-ideal.kcal):null;
+  var head;
+  if(ideal.mode==='race'){
+    head='<b>Ideal today: '+n0(ideal.kcal)+' kcal — maintenance, no deficit.</b> '+
+         ideal.raceDays+' day'+(ideal.raceDays===1?'':'s')+' to the run.';
+  }else if(ideal.mode==='cut'){
+    head='<b>Ideal today: '+n0(ideal.kcal)+' kcal.</b> Maintenance '+n0(ideal.maint)+
+         ' less a '+n0(ideal.deficit)+' kcal deficit — '+n1(ideal.toGo)+' kg to go from '+
+         n1(ideal.curW)+' to '+n1(ideal.goalW)+' kg, about '+
+         Math.ceil(ideal.toGo/ideal.rate)+' weeks at this rate.';
+  }else if(ideal.mode==='reached'){
+    head='<b>Ideal today: '+n0(ideal.kcal)+' kcal.</b> Goal weight reached.';
+  }else{
+    head='<b>Ideal today: '+n0(ideal.kcal)+' kcal.</b>';
+  }
+
+  var vsTarget='';
+  if(diff!=null){
+    vsTarget = Math.abs(diff)<=50
+      ? '<div class="note">The target set in the database ('+n0(t.energy_kcal)+') matches this.</div>'
+      : '<div class="note">The target set in the database is '+n0(t.energy_kcal)+' kcal, '+
+        (diff>0?'+':'')+n0(diff)+' against this. That difference may well be deliberate — '+
+        'targets are set by hand and this figure is only a reference.</div>';
+  }
+
+  return '<div class="'+(ideal.mode==='race'?'ok':'info')+'">'+head+' '+esc(ideal.reason)+'</div>'+vsTarget+
+    '<div class="note">Maintenance is estimated from your own weight change against logged intake. '+
+    'Logged intake is thought to under-report by 10–30%, so treat it as an estimate, not a measurement.</div>';
+}
+
 /* Client-side arithmetic. Deliberately not stored: this is a thinking tool,
    not a target. Targets live in the database and are set deliberately. */
 var BAL='c';
@@ -1795,25 +2187,8 @@ function renderDietRatio(){
   var def=(typeof RATIO_DEF==='undefined')?0:RATIO_DEF;
   var kcal=t.energy_kcal+def;
 
-  // What the day's target already implies, relative to estimated maintenance.
-  // The "ideal" is not something this tool invents — it is the target already
-  // set in the database, and the job here is to explain what that target means
-  // rather than to propose a different one.
-  var maint=(DATA&&DATA.settings&&Number(DATA.settings.maintenance_kcal_estimate))||2200;
-  var implied=t.energy_kcal-maint;
-  var raceDays=(DATA&&DATA.race&&DATA.race.days_to);
-  var idealNote;
-  if(raceDays!=null&&raceDays>=0&&raceDays<=10){
-    idealNote='<div class="ok"><b>Ideal right now is the target as set: '+n0(t.energy_kcal)+' kcal.</b> '+
-      'That is '+(implied>=0?'+':'')+n0(implied)+' against your estimated maintenance of '+n0(maint)+
-      '. No deficit before the run — deliberate, and worth protecting. Two days at maintenance-plus '+
-      'will not undo eleven weeks of work.</div>';
-  }else{
-    idealNote='<div class="info"><b>Target as set: '+n0(t.energy_kcal)+' kcal</b>, which is '+
-      (implied>=0?'+':'')+n0(implied)+' against estimated maintenance of '+n0(maint)+' kcal. '+
-      'Maintenance is derived from your own weight change against logged intake, and logged intake '+
-      'is thought to under-report by 10–30%, so treat it as an estimate rather than a measurement.</div>';
-  }
+  var ideal=idealEnergy();
+  var idealNote=idealExplain(ideal,t);
   var p=t.protein_g, f=t.fat_g, c;
   if(BAL==='p'){ p=Math.max(0,Math.round((kcal-t.carbs_g*4-t.fat_g*9)/4)); c=t.carbs_g; }
   else if(BAL==='f'){ f=Math.max(0,Math.round((kcal-t.carbs_g*4-t.protein_g*4)/9)); c=t.carbs_g; }
@@ -1823,7 +2198,13 @@ function renderDietRatio(){
     idealNote+
     '<div class="sl" style="margin-top:11px"><span>Adjust from target</span><b class="num">'+(def>0?'+':'')+def+' kcal</b></div>'+
     '<input type="range" id="ratio-def" min="-900" max="900" step="25" value="'+def+'" oninput="setRatio(this.value)">'+
-    (def!==0?'<div class="hint"><span>target '+n0(t.energy_kcal)+'</span><span><button class="btn sm" onclick="setRatio(0)">back to target</button></span></div>':'')+
+    '<div class="hint"><span>target '+n0(t.energy_kcal)+
+      (ideal.kcal!=null?(' · ideal '+n0(ideal.kcal)):'')+'</span>'+
+      (def!==0?'<span><button class="btn sm" onclick="setRatio(0)">back to target</button></span>':'')+
+      (ideal.kcal!=null&&Math.abs(t.energy_kcal-ideal.kcal)>50
+        ? '<span><button class="btn sm" onclick="setRatio('+(ideal.kcal-t.energy_kcal)+')">jump to ideal</button></span>'
+        : '')+
+      '</div>'+
     '<div style="font-size:11px;color:var(--t2);margin:9px 0 6px">Which macro absorbs the change</div>'+
     '<div class="seg"><button class="'+(BAL==='p'?'on':'')+'" onclick="setBal(\'p\')">Protein</button>'+
     '<button class="'+(BAL==='c'?'on':'')+'" onclick="setBal(\'c\')">Carbs</button>'+
@@ -1855,6 +2236,63 @@ function loadRunning(){
     RUNS_LOADED=false;
     $('runlist').innerHTML='<div class="warn">Could not load runs.</div>';
   });
+}
+
+/* Run detail. Everything here is measured — nothing derived and presented as
+   though it were recorded. */
+function runModal(i){
+  var r=RUNS[i]; if(!r)return;
+  var race=(DATA&&DATA.race)||{};
+  var head='<div class="mh"><div><div class="mt">'+esc(fmtDate(r.local_date))+'</div>'+
+    '<div class="msub">'+n1(r.distance_km)+' km · '+esc(r.pace||'—')+'/km</div></div>'+
+    '<div class="mnav">'+
+      (i>0?'<button onclick="runModal('+(i-1)+')" aria-label="Newer run">‹</button>':'')+
+      (i<RUNS.length-1?'<button onclick="runModal('+(i+1)+')" aria-label="Older run">›</button>':'')+
+      '<button onclick="closeModal()" aria-label="Close">✕</button></div></div>';
+
+  var b='<div class="grid g2" style="margin-bottom:9px">'+
+    '<div class="tile"><div class="tl">Distance</div><div class="tv num">'+n1(r.distance_km)+'</div><div class="tsub">km</div></div>'+
+    '<div class="tile"><div class="tl">Duration</div><div class="tv num">'+
+      (r.duration_min?hm(r.duration_min):'—')+'</div><div class="tsub">h:mm</div></div>'+
+    '<div class="tile"><div class="tl">Pace</div><div class="tv num">'+esc(r.pace||'—')+'</div><div class="tsub">per km</div></div>'+
+    '<div class="tile"><div class="tl">Avg HR</div><div class="tv num">'+
+      (r.avg_hr?Math.round(r.avg_hr):'—')+'</div><div class="tsub">'+
+      (r.max_hr?('max '+Math.round(r.max_hr)):'not recorded')+'</div></div>'+
+    '</div>';
+
+  if(r.temp_c!=null){
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--teal)"></i><span>Conditions</span></div>'+
+      '<div class="mbv num">'+n1(r.temp_c)+'°C</div></div>';
+  }
+
+  // Context that only makes sense against the rest of the block.
+  b+='<div class="mblock"><div class="mbh"><i style="background:var(--blue)"></i><span>In context</span></div>'+
+    '<div class="mmac">'+
+    (r.km_last_7d!=null?'<div class="mmr"><span>7 days to this run</span><b>'+n1(r.km_last_7d)+' km</b></div>':'')+
+    (r.longest_prior_30d!=null?'<div class="mmr"><span>Longest in the prior 30 days</span><b>'+n1(r.longest_prior_30d)+' km</b></div>':'')+
+    (r.longest_prior_30d?'<div class="mmr"><span>Step up from that</span><b>'+
+      (r.distance_km>r.longest_prior_30d?'+':'')+
+      Math.round((r.distance_km/r.longest_prior_30d-1)*100)+'%</b></div>':'')+
+    '</div></div>';
+
+  if(race.target_minutes&&race.distance_km&&r.pace_sec_per_km){
+    var target=race.target_minutes*60/race.distance_km;
+    var delta=r.pace_sec_per_km-target;
+    b+='<div class="mblock"><div class="mbh"><i style="background:var(--accent)"></i><span>Against race pace</span></div>'+
+      '<div class="mbv num">'+(delta>0?'+':'')+Math.round(delta)+' s/km</div>'+
+      '<div class="mbd">Race target is '+mmss(target/60)+'/km. '+
+      (delta>0?'This run was slower, which is what most training runs should be.'
+             :'This run was quicker than race pace.')+'</div></div>';
+  }
+
+  b+='<div class="mblock" style="margin-bottom:14px"><div class="mbh"><i style="background:var(--t3)"></i>'+
+    '<span>Not captured</span></div>'+
+    '<div class="mbd">Per-kilometre splits and the route. Health Auto Export sends route data, '+
+    'but route_r2_key has never been populated — 0 of 312 runs. Until it is, these cannot be shown '+
+    'without inventing them.</div></div>'+
+    '<button class="btn f" style="width:100%" onclick="closeModal()">Close</button>';
+
+  openModal(head+b);
 }
 
 function paceStr(secPerKm){
@@ -1895,6 +2333,29 @@ function renderRunning(){
   var race=(DATA&&DATA.race)||{};
   var today=isoOf(new Date());
 
+  // ── race card, read from the database rather than hardcoded ──
+  if(race.date){
+    var d=new Date(race.date+'T12:00:00');
+    var mins=race.target_minutes;
+    $('racename').textContent=race.label||'Race';
+    $('racecount').textContent=race.days_to>0?(race.days_to+' days'):(race.days_to===0?'today':'done');
+    $('racetiles').innerHTML=
+      '<div class="tile"><div class="tl">Date</div><div class="tv num">'+d.getDate()+' '+
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+
+        '</div><div class="tsub">'+DAYS[d.getDay()]+'</div></div>'+
+      '<div class="tile"><div class="tl">Target</div><div class="tv num">'+(mins?hm(mins):'—')+'</div>'+
+        '<div class="tsub">'+(mins&&race.distance_km?mmss(mins/race.distance_km)+'/km':'')+'</div></div>'+
+      '<div class="tile"><div class="tl">Fuel rate</div><div class="tv num">'+
+        (race.fuel_g_per_hour||'—')+' g/h</div><div class="tsub">'+
+        (race.gel_carbs_g?(race.gel_carbs_g+' g per gel'):'')+'</div></div>';
+    $('racenote').textContent='Read live from settings in the database — race_date, '+
+      'race_target_minutes, race_fuel_g_per_hour, race_gel_carbs_g. Change it there and this '+
+      'screen follows; it cannot drift.';
+  }else{
+    $('racetiles').innerHTML='';
+    $('racenote').textContent='No race configured in settings.';
+  }
+
   // ── form tiles ──
   var last=RUNS[0]||null;
   var km7=RUNS.filter(function(r){return r.local_date>isoOf(new Date(Date.now()-7*86400000));})
@@ -1924,50 +2385,47 @@ function renderRunning(){
   $('coachflags').innerHTML=flags;
 
   // ── recent runs ──
-  var rows=RUNS.slice(0,12).map(function(r){
+  var rows=RUNS.slice(0,12).map(function(r,i){
     var hr=r.avg_hr?(' · '+Math.round(r.avg_hr)+' bpm'):'';
-    return '<div class="exc"><div class="eh"><span class="en">'+esc(fmtDate(r.local_date))+'</span>'+
-           '<span class="eset">'+n1(r.distance_km)+' km</span></div>'+
-           '<div class="enote">'+esc((r.pace||'—')+'/km'+hr+
-           (r.duration_min?(' · '+Math.round(r.duration_min)+' min'):''))+'</div></div>';
+    return '<div class="row tap" onclick="runModal('+i+')"><div class="rmain">'+
+           '<div class="rt">'+esc(fmtDate(r.local_date))+
+             (r.distance_km>=20?'<span class="pill blue">long</span>':'')+'</div>'+
+           '<div class="rsub">'+esc((r.pace||'—')+'/km'+hr+
+             (r.duration_min?(' · '+Math.round(r.duration_min)+' min'):''))+'</div></div>'+
+           '<div class="rval"><b>'+n1(r.distance_km)+'</b> km</div></div>';
   }).join('');
   $('runlist').innerHTML = rows +
-    '<div class="note"><b>Per-kilometre splits and route maps are not available.</b> '+
-    'D1 holds minute-grouped heart rate for runs but no per-km splits, and route_r2_key '+
-    'has never been populated — 0 of 312 runs. Deriving splits from heart rate would be '+
-    'a guess presented as a measurement, so they are shown as absent instead.</div>';
+    '<div class="note" style="padding:12px 15px 14px">Tap any run for detail. '+
+    '<b>Per-kilometre splits and route maps are not available</b> — D1 holds minute-grouped heart '+
+    'rate but no per-km splits, and route_r2_key has never been populated for any of 312 runs. '+
+    'Deriving splits from heart rate would be a guess presented as a measurement.</div>';
 
   // ── weekly load ──
   // Vertical bars with plain-language labels. The previous version showed raw
   // week-start dates, which told you nothing about when "08-10" was.
   var wk=weeklyKm(RUNS,8);
-  var maxKm=Math.max.apply(null,wk.map(function(w){return w.km;}).concat([1]));
-  var vals=wk.map(function(w){return '<div class="vval">'+(w.km||'')+'</div>';});
-  var bars=wk.map(function(w,i){
-    var isThis=(i===wk.length-1);
-    return '<div class="vbar'+(isThis?' now':'')+'" title="'+esc(w.week)+'">'+
-           '<i style="height:'+Math.max(2,(w.km/maxKm)*100).toFixed(1)+'%"></i></div>';
-  }).join('');
-  var labels=wk.map(function(w,i){
-    var back=wk.length-1-i;
-    var lab = back===0?'this<br>week' : back===1?'last<br>week' : back+'<br>wks ago';
-    return '<span>'+lab+'</span>';
-  }).join('');
-
-  var thisWk=wk[wk.length-1].km, lastWk=wk[wk.length-2]?wk[wk.length-2].km:null;
-  var avg8=wk.reduce(function(a,w){return a+w.km;},0)/wk.length;
-
-  $('loadcard').innerHTML=
-    '<div class="ch"><span class="ct">'+thisWk+' km<span style="font-size:12px;color:var(--t2);font-weight:400"> this week</span></span>'+
-    '<span class="cm num">8-week avg '+Math.round(avg8)+' km</span></div>'+
-    '<div style="display:flex;gap:5px;margin-bottom:2px">'+vals.join('')+'</div>'+
-    '<div class="vbars">'+bars+'</div>'+
-    '<div class="vlabels">'+labels+'</div>'+
-    (lastWk!=null&&lastWk>0
-      ? '<div class="note">'+(thisWk<lastWk?'Down ':'Up ')+Math.abs(Math.round((thisWk/lastWk-1)*100))+
-        '% on last week'+(race.days_to!=null&&race.days_to<=14?' — which is what a taper should look like.':'.')+'</div>'
-      : '')+
-    '<div class="note">Kilometres per Monday-start week. Superseded rows excluded, so the Strava duplicates no longer double-count.</div>';
+  $('loadcard').innerHTML=barChart(
+    wk.map(function(w,i){
+      var back=wk.length-1-i;
+      return {
+        value: w.km,
+        label: back===0?'this':(back===1?'last':back+'w'),
+        title: w.week,
+        now: back===0
+      };
+    }),
+    {unit:'km', decimals:0}
+  ) + (function(){
+    var thisWk=wk[wk.length-1].km, lastWk=wk[wk.length-2]?wk[wk.length-2].km:null;
+    var avg8=wk.reduce(function(a,w){return a+w.km;},0)/wk.length;
+    var s='<div class="note"><b>'+thisWk+' km</b> this week · 8-week average '+Math.round(avg8)+' km.';
+    if(lastWk!=null&&lastWk>0){
+      s+=' '+(thisWk<lastWk?'Down ':'Up ')+Math.abs(Math.round((thisWk/lastWk-1)*100))+'% on last week'+
+         (race.days_to!=null&&race.days_to<=14?' — which is what a taper should look like.':'.');
+    }
+    return s+'</div>'+
+      '<div class="note">Kilometres per Monday-start week, most recent on the right. Superseded rows excluded, so the Strava duplicates no longer double-count.</div>';
+  })();
 
   // ── race projection ──
   var longs=RUNS.filter(function(r){return r.distance_km>=15&&r.pace_sec_per_km;});
@@ -2133,9 +2591,10 @@ function boot(){
   renderRail();
   fillProducts();
 
+  // Fallback only — renderRunning() replaces these from the database as soon
+  // as /api/today returns. RACE exists so the calculator still works offline
+  // before any request completes.
   $('racename').textContent=RACE.label;
-  var d=new Date(RACE.date+'T12:00:00');
-  $('racedate').textContent=d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
   var days=daysToRace();
   $('racecount').textContent=days>0?days+' days':(days===0?'today':'done');
 
@@ -2166,6 +2625,14 @@ function boot(){
     refresh();
   });
   if(!navigator.onLine) setSync('Offline · showing last loaded data','warn');
+
+  // Escape closes whatever is open. Small thing, but a modal you cannot
+  // dismiss with the keyboard is a modal that traps you.
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Escape')return;
+    if($('modal').classList.contains('open'))closeModal();
+    else if($('sheet').classList.contains('open'))closeSheet();
+  });
 }
 
 if('serviceWorker' in navigator){
