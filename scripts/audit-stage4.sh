@@ -182,17 +182,20 @@ echo ""
 echo "4. CORS — can the browser talk to the API, and only from our origin?"
 echo "───────────────────────────────────────────────────────────────"
 
+# Herestrings here too — same SIGPIPE trap, and these responses only stay small
+# by accident. A test that works because the input happened to fit in a buffer
+# is not a test that works.
 H=$(curl -s -i -X OPTIONS "$API/api/today" -H "Origin: $PAGES" -H "Access-Control-Request-Method: GET")
-echo "$H" | head -1 | grep -q "204" && ok "Preflight from the app origin returns 204" || bad "Preflight status: $(echo "$H" | head -1)"
-echo "$H" | grep -qi "access-control-allow-origin: $PAGES" && ok "Allow-Origin echoes the app origin" || bad "Allow-Origin header missing"
+grep -q "204" <<< "$(head -1 <<< "$H")" && ok "Preflight from the app origin returns 204" || bad "Preflight status: $(head -1 <<< "$H")"
+grep -qi "access-control-allow-origin: $PAGES" <<< "$H" && ok "Allow-Origin echoes the app origin" || bad "Allow-Origin header missing"
 
 H=$(curl -s -i -X OPTIONS "$API/api/today" -H "Origin: https://evil.example")
-echo "$H" | head -1 | grep -q "403" && ok "Preflight from an unknown origin refused" || bad "Unknown origin got: $(echo "$H" | head -1)"
-echo "$H" | grep -qi "access-control-allow-origin" && bad "Allow-Origin leaked to an unknown origin" || ok "No Allow-Origin for unknown origins"
+grep -q "403" <<< "$(head -1 <<< "$H")" && ok "Preflight from an unknown origin refused" || bad "Unknown origin got: $(head -1 <<< "$H")"
+grep -qi "access-control-allow-origin" <<< "$H" && bad "Allow-Origin leaked to an unknown origin" || ok "No Allow-Origin for unknown origins"
 
 H=$(curl -s -i "$API/data/summary" -H "Authorization: Bearer $SECRET")
-echo "$H" | head -1 | grep -q "200" && ok "Phone path still works with no Origin header" || bad "No-Origin request failed"
-echo "$H" | grep -qi "access-control-allow-origin" && warn "CORS headers sent to a non-browser client" || ok "No CORS headers when no Origin sent"
+grep -q "200" <<< "$(head -1 <<< "$H")" && ok "Phone path still works with no Origin header" || bad "No-Origin request failed"
+grep -qi "access-control-allow-origin" <<< "$H" && warn "CORS headers sent to a non-browser client" || ok "No CORS headers when no Origin sent"
 
 # ───────────────────────── 5. FRONT END ─────────────────────────
 echo ""
@@ -210,17 +213,34 @@ expect_status "Icon is served" 200 "$PAGES/icon-192.png"
 # garbage as against a correct page. Readability is proven first, and only then
 # is anything asserted about the contents.
 B=$(curl -s --compressed "$PAGES/")
-if echo "$B" | grep -q '<title>Fitness Hub</title>'; then
+
+# Herestrings, not `echo "$B" | grep`. With pipefail set, `grep -q` stops
+# reading as soon as it matches and closes the pipe; on a body larger than the
+# 64 KB pipe buffer, echo is still writing, takes SIGPIPE, and the pipeline
+# reports failure even though the match SUCCEEDED. That produced a false
+# failure here for exactly one reason: the HTML is 105 KB. Small responses,
+# like the CORS headers above, fit in the buffer and never showed it.
+#
+# The insidious part is that it only breaks POSITIVE matches. A grep that finds
+# nothing reads to the end, so every "check something is absent" test passed
+# regardless — including against output that was never readable at all.
+if grep -q '<title>Fitness Hub</title>' <<< "$B"; then
   ok "App HTML is readable"
 
   MISSING=""
   for t in hub summary training running diet body goals; do
-    echo "$B" | grep -q "id=\"p-$t\"" || MISSING="$MISSING $t"
+    grep -q "id=\"p-$t\"" <<< "$B" || MISSING="$MISSING $t"
   done
   [ -z "$MISSING" ] && ok "All seven tab sections present" || bad "Tab section(s) missing:$MISSING"
 
-  echo "$B" | grep -q 'is not connected yet' && bad "A placeholder stub is still shipping" || ok "No placeholder stubs left in the build"
-  echo "$B" | grep -q 'fonts.googleapis.com' && warn "Google Fonts still referenced — a slow CDN blocks first paint" || ok "No external font dependency"
+  grep -q 'is not connected yet' <<< "$B" && bad "A placeholder stub is still shipping" || ok "No placeholder stubs left in the build"
+  grep -q 'fonts.googleapis.com' <<< "$B" && warn "Google Fonts still referenced — a slow CDN blocks first paint" || ok "No external font dependency"
+
+  # Sanity: the page should be substantial. A near-empty 200 would pass every
+  # "absent" check above and mean nothing.
+  SIZE=${#B}
+  [ "$SIZE" -gt 50000 ] && ok "App HTML is a plausible size (${SIZE} bytes)" \
+    || bad "App HTML is only ${SIZE} bytes — suspiciously small"
 else
   bad "Could not read the app HTML — nothing below it can be trusted"
 fi
