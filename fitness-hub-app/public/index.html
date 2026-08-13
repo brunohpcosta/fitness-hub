@@ -2472,12 +2472,15 @@ function renderRunning(){
 }
 
 /* ─────────────────────────── refuel calculator ─────────────────────────── */
-/* Sodium is deliberately blank, not zero. The Coles gel sodium content is
-   unverified — showing 0 would assert something we do not know. */
+/* Read off the packet 12 Aug 2026. Sodium is now known rather than blank —
+   and it is very low, which is the point. Caffeine is still unverified: the
+   label says "Added Guarana" without a quantity, so the Cola figure below is
+   the long-standing project assumption, not a measurement. */
 var PRODUCTS=[
-  {n:'Coles Perform Elite',            c:23.5,k:0,  na:null},
-  {n:'Coles Perform Elite Cola (caffeine)', c:23.5,k:50, na:null},
-  {n:'Custom',                          c:25,  k:0,  na:null}
+  {n:'Coles Perform Elite — Green Apple',      c:23.8, k:0,  na:7.46},
+  {n:'Coles Perform Elite — Cola (guarana)',   c:23.8, k:50, na:7.46},
+  {n:'Coles Perform Elite — Raspberry (2× Na)',c:23.8, k:0,  na:15.4},
+  {n:'Custom',                                 c:25,   k:0,  na:null}
 ];
 
 function fillProducts(){
@@ -2570,10 +2573,21 @@ function fuel(){
   }
 
   if(na==null){
-    w.push(['info','<b>Sodium unverified.</b> The sodium content of these gels has never been confirmed off the packet. Rather than assume, either read the label or carry an electrolyte tablet so the total is known. Target 0.5–0.7 g per litre of fluid.']);
-  } else if(totalNa!=null){
+    w.push(['info','<b>Sodium unknown for this product.</b> Enter it from the packet, or carry an electrolyte source so the total is known rather than guessed. Target 0.5–0.7 g per litre of fluid.']);
+  } else {
     var litresLo=0.4*hours, litresHi=0.8*hours;
-    w.push(['info','Sodium from gels: '+Math.round(totalNa)+' mg. Against '+litresLo.toFixed(1)+'–'+litresHi.toFixed(1)+' L of fluid you want roughly '+Math.round(500*litresLo)+'–'+Math.round(700*litresHi)+' mg total.']);
+    var needLo=Math.round(500*litresLo), needHi=Math.round(700*litresHi);
+    var shortLo=needLo-totalNa;
+    if(shortLo>200){
+      w.push(['warn','<b>Sodium shortfall: '+Math.round(totalNa)+' mg from gels against '+
+        needLo+'–'+needHi+' mg needed</b> for '+litresLo.toFixed(1)+'–'+litresHi.toFixed(1)+
+        ' L of fluid. These gels carry almost none — you need roughly '+
+        Math.round(shortLo)+'–'+Math.round(needHi-totalNa)+' mg from an electrolyte tablet or drink. '+
+        'Test it on the rehearsal, not on race day.']);
+    } else {
+      w.push(['ok','Sodium '+Math.round(totalNa)+' mg from gels, against '+needLo+'–'+needHi+
+        ' mg for the fluid you plan to drink.']);
+    }
   }
 
   w.push(['info','Fluid: '+ (0.4*hours).toFixed(1)+'–'+(0.8*hours).toFixed(1)+' L over '+hm(durMin)+', drunk to thirst rather than to schedule.']);

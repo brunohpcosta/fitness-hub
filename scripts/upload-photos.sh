@@ -2,57 +2,59 @@
 #
 # Upload progress photos to the fitness-hub-photos R2 bucket.
 #
-#   ./upload-photos.sh ~/Documents/Fitness/photos            # dry run, uploads nothing
-#   ./upload-photos.sh ~/Documents/Fitness/photos --go       # actually upload
+#   ./upload-photos.sh ~/Documents/Fitness/fitness-hub/01-photos          # dry run
+#   ./upload-photos.sh ~/Documents/Fitness/fitness-hub/01-photos --go     # upload
+#   ./upload-photos.sh ~/Documents/Fitness/fitness-hub/01-photos --go --resume
 #
-# Deliberately dry-run by default. It lists exactly what it would do and stops,
-# so you see the full picture before a single byte moves.
+# Dry run by default. Expected filenames: YYYY-MM-DD-view.jpg
 #
-# Expected filenames: YYYY-MM-DD-view.jpg  e.g. 2026-08-02-front.jpg
-# Anything that does not match that pattern is reported and skipped rather than
-# uploaded under a key nothing can read back.
+# Rewritten after a first run uploaded 37 of 123 and failed the rest with no
+# explanation. Four things were wrong:
 #
-# Must be run from anywhere, but uses the pinned wrangler in fitness-hub-api so
-# it cannot pick up a different version than the project was built against.
+#   1. Errors went to /dev/null. A failure told you nothing about why, which is
+#      useless precisely when you need it. Now captured and shown.
+#   2. Ctrl-C did not stop it. The loop carried on through 90 more files. Now
+#      trapped and exits cleanly.
+#   3. No pacing. Each upload spawns a fresh wrangler process and re-auths, and
+#      firing 123 of those as fast as possible looks like abuse to the API.
+#      Now paced, with retry and backoff.
+#   4. No resume. A re-run repeated everything. --resume skips what is already
+#      in the bucket.
 
-set -euo pipefail
+set -uo pipefail
 
 BUCKET="fitness-hub-photos"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WRANGLER="$REPO/fitness-hub-api/node_modules/.bin/wrangler"
 
 SRC="${1:-}"
-GO="${2:-}"
+shift || true
+GO=0; RESUME=0
+for a in "$@"; do
+  [[ "$a" == "--go" ]] && GO=1
+  [[ "$a" == "--resume" ]] && RESUME=1
+done
 
-if [[ -z "$SRC" ]]; then
-  echo "usage: $0 <folder-with-photos> [--go]"
-  exit 1
-fi
-if [[ ! -d "$SRC" ]]; then
-  echo "Not a folder: $SRC"
-  exit 1
-fi
-if [[ ! -x "$WRANGLER" ]]; then
-  echo "Pinned wrangler not found at $WRANGLER"
-  echo "Run npm install in fitness-hub-api first."
-  exit 1
-fi
+[[ -z "$SRC" ]]   && { echo "usage: $0 <folder> [--go] [--resume]"; exit 1; }
+[[ ! -d "$SRC" ]] && { echo "Not a folder: $SRC"; exit 1; }
+[[ ! -x "$WRANGLER" ]] && { echo "Pinned wrangler not found at $WRANGLER"; exit 1; }
+
+INTERRUPTED=0
+trap 'INTERRUPTED=1; echo; echo "Interrupted. Anything already uploaded stays — re-run with --resume."; exit 130' INT
 
 echo "Source : $SRC"
 echo "Bucket : $BUCKET"
-echo "Mode   : $([[ "$GO" == "--go" ]] && echo 'UPLOAD' || echo 'dry run — nothing will be written')"
+echo "Mode   : $([[ $GO -eq 1 ]] && echo 'UPLOAD' || echo 'dry run — nothing will be written')"
+[[ $RESUME -eq 1 ]] && echo "Resume : skipping objects already in the bucket"
 echo
 
 ok=0; bad=0
-declare -a GOOD_FILES=() GOOD_KEYS=()
-
+declare -a FILES=() KEYS=()
 while IFS= read -r -d '' f; do
   base="$(basename "$f")"
   if [[ "$base" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})-([A-Za-z]+)\.(jpg|jpeg|png|JPG|JPEG|PNG)$ ]]; then
-    key="${BASH_REMATCH[1]}-$(echo "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]').${BASH_REMATCH[3]}"
-    key="$(echo "$key" | tr '[:upper:]' '[:lower:]')"
-    GOOD_FILES+=("$f"); GOOD_KEYS+=("$key")
-    ok=$((ok+1))
+    key="$(echo "${BASH_REMATCH[1]}-${BASH_REMATCH[2]}.${BASH_REMATCH[3]}" | tr '[:upper:]' '[:lower:]')"
+    FILES+=("$f"); KEYS+=("$key"); ok=$((ok+1))
   else
     echo "  SKIP (name does not match YYYY-MM-DD-view.ext): $base"
     bad=$((bad+1))
@@ -63,44 +65,89 @@ echo
 echo "Matched : $ok"
 echo "Skipped : $bad"
 echo
+[[ $ok -eq 0 ]] && { echo "Nothing to upload."; exit 0; }
 
-if [[ $ok -eq 0 ]]; then
-  echo "Nothing to upload."
-  exit 0
+# What is already there, so --resume has something to compare against.
+declare -a EXISTING=()
+if [[ $RESUME -eq 1 ]]; then
+  echo "Listing the bucket…"
+  # NOT mapfile — macOS ships bash 3.2 and mapfile arrived in bash 4. It fails
+  # with "command not found", EXISTING stays empty, and --resume silently
+  # re-uploads everything while claiming to skip. Found exactly that way.
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && EXISTING+=("$line")
+  done < <("$WRANGLER" r2 object list "$BUCKET" --remote 2>/dev/null \
+           | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z]+\.(jpg|jpeg|png)' | sort -u)
+  echo "  ${#EXISTING[@]} object(s) already in the bucket"
+  if [[ ${#EXISTING[@]} -eq 0 ]]; then
+    echo "  (if that looks wrong, the listing failed — every file will be re-sent)"
+  fi
+  echo
 fi
+have(){ local k="$1"; for e in "${EXISTING[@]:-}"; do [[ "$e" == "$k" ]] && return 0; done; return 1; }
 
-echo "First five keys that would be created:"
-for i in 0 1 2 3 4; do
-  [[ $i -lt $ok ]] && echo "  $BUCKET/${GOOD_KEYS[$i]}"
-done
-echo
-
-if [[ "$GO" != "--go" ]]; then
+if [[ $GO -eq 0 ]]; then
+  echo "First five keys that would be created:"
+  for i in 0 1 2 3 4; do [[ $i -lt $ok ]] && echo "  $BUCKET/${KEYS[$i]}"; done
+  echo
   echo "Dry run. Re-run with --go to upload."
   echo
-  echo "Before uploading all of them, upload one by hand and confirm the syntax"
-  echo "works with your wrangler version:"
+  echo "Verify the command works with your wrangler version first:"
   echo
-  echo "  $WRANGLER r2 object put \"$BUCKET/${GOOD_KEYS[0]}\" --file \"${GOOD_FILES[0]}\" --remote"
+  echo "  $WRANGLER r2 object put \"$BUCKET/${KEYS[0]}\" --file \"${FILES[0]}\" --remote"
   echo
   exit 0
 fi
 
-echo "Uploading $ok files. Ctrl-C stops it; anything already uploaded stays."
+echo "Uploading. Ctrl-C stops cleanly; anything already uploaded stays."
 echo
-fail=0
-for i in "${!GOOD_FILES[@]}"; do
-  printf '[%3d/%3d] %s ... ' "$((i+1))" "$ok" "${GOOD_KEYS[$i]}"
-  if "$WRANGLER" r2 object put "$BUCKET/${GOOD_KEYS[$i]}" \
-       --file "${GOOD_FILES[$i]}" --remote >/dev/null 2>&1; then
-    echo "ok"
+
+fail=0; done_n=0; skipped=0
+LOG="/tmp/upload-photos-errors.log"; : > "$LOG"
+
+for i in "${!FILES[@]}"; do
+  key="${KEYS[$i]}"; file="${FILES[$i]}"
+  printf '[%3d/%3d] %-28s ' "$((i+1))" "$ok" "$key"
+
+  if [[ $RESUME -eq 1 ]] && have "$key"; then
+    echo "skip (already there)"; skipped=$((skipped+1)); continue
+  fi
+
+  # Up to three attempts with backoff. A single transient failure in a run of
+  # 123 should not need a human.
+  attempt=0; success=0
+  while [[ $attempt -lt 3 ]]; do
+    attempt=$((attempt+1))
+    if err=$("$WRANGLER" r2 object put "$BUCKET/$key" --file "$file" --remote 2>&1); then
+      success=1; break
+    fi
+    [[ $attempt -lt 3 ]] && sleep $((attempt*3))
+  done
+
+  if [[ $success -eq 1 ]]; then
+    echo "ok$([[ $attempt -gt 1 ]] && echo " (attempt $attempt)")"
+    done_n=$((done_n+1))
   else
     echo "FAILED"
     fail=$((fail+1))
+    { echo "=== $key ==="; echo "$err"; echo; } >> "$LOG"
+    # Show the first failure immediately — waiting until the end to find out
+    # why is how 86 files failed silently last time.
+    if [[ $fail -eq 1 ]]; then
+      echo
+      echo "  First failure, in full:"
+      echo "$err" | sed 's/^/    /'
+      echo
+    fi
   fi
+
+  # Pace it. Each call is a separate authenticated process; firing them as fast
+  # as possible is what appears to have tripped the API on the first run.
+  sleep 0.4
 done
 
 echo
-echo "Done. $((ok-fail)) uploaded, $fail failed."
-[[ $fail -gt 0 ]] && echo "Re-run to retry — an object that already exists is simply overwritten."
+echo "Done. $done_n uploaded, $skipped skipped, $fail failed."
+[[ $fail -gt 0 ]] && echo "Errors written to $LOG"
+[[ $fail -gt 0 ]] && echo "Re-run with --go --resume to retry only what is missing."
 exit 0
