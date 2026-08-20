@@ -6,3 +6,5 @@ node_modules/
 *.log
 wrangler.jsonc.backup
 *.backup
+index.html.backup*
+*.backup-*
