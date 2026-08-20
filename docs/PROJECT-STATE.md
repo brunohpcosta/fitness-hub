@@ -195,6 +195,22 @@ localhost:8788). Preflight is answered **above** the auth gate — `OPTIONS` car
   buffer. Use `grep -q pattern <<< "$var"`.
 - **A test that can only pass is not a test.** Three front-end checks were "grep finds nothing",
   which passed happily against output that was never readable.
+- **A fixture that drifts from the API tests a world that does not exist.** `fixtures.py` carried a
+  hand-typed three-key `settings` stub. The Worker gained four body-fat calibration keys; the stub
+  did not, so `bfFactor()` was null throughout the suite and the conversion path — the whole point
+  of migrations 0021/0022 — was never once exercised. Two labelling checks "passed" only because
+  no conversion ever happened. The fixture now reads settings from the database, and
+  `render-assert.js` compares its key list against the Worker's `settings:` block.
+- **`fixtures.py` locates the database relative to itself**, not `~/Documents`. The hardcoded home
+  path resolved on one machine only.
+- **A class-name check cannot catch a bad class *pair*.** `.card.tap` was dead — nothing in this app
+  carries both — yet every check passed, because "card" and "tap" each appear somewhere. Catching
+  that automatically needs a real DOM plus render coverage of every state; the attempt reported
+  eleven live selectors as dead and was removed rather than papered over with an allowlist.
+- **`transform-origin` belongs on the element, not inside `@keyframes`.** In a keyframe it is an
+  animated property in its own right and does not hold, so a bar scales from its middle.
+- **An exit animation makes hiding asynchronous.** Anything that reopens within the timer window
+  must cancel it, or the pending callback closes the dialog that just opened.
 
 ---
 
@@ -215,10 +231,24 @@ localhost:8788). Preflight is answered **above** the auth gate — `OPTIONS` car
 - **Long pastes fail in macOS Terminal.** Use `touch file && open -e file`.
 - Bruno may report "nothing happens" when a command is merely slow.
 
-**Testing:** `~/Desktop/audit.sh` (46 checks — auth, robustness, idempotency, timezone, integrity,
-pipeline, schema parity, source control) and `scripts/audit-stage4.sh` (51 checks — read API, data
-correctness, write API, CORS, front end, v2 isolation). As at 12 Aug: **97 passing, 0 failing.**
-`audit.sh` still lives on the Desktop, outside version control — worth moving into `scripts/`.
+**Testing — two layers.**
+
+*Live, against the deployed stack:* `~/Desktop/audit.sh` (46 checks — auth, robustness,
+idempotency, timezone, integrity, pipeline, schema parity, source control) and
+`scripts/audit-stage4.sh` (51 checks — read API, data correctness, write API, CORS, front end, v2
+isolation). As at 12 Aug: **97 passing, 0 failing.** `audit.sh` still lives on the Desktop, outside
+version control — worth moving into `scripts/`.
+
+*Offline, against the local D1 copy:* `bash fitness-hub-app/test/run.sh` — extracts the app's script
+and runs every render function in a headless DOM against real data, then asserts on the output.
+33 render + 72 assert + 51 theme/accessibility = **156 checks, 0 failing** as at 14 Aug. Needs
+`npx wrangler d1 migrations apply fitness-hub-db --local` to have been run at least once.
+
+Neither layer can see motion. Animation is the one thing that looks finished while being wrong,
+because nothing about it throws — the suite checks that timings come from tokens, that
+`prefers-reduced-motion` disables everything, that entrances are keyed to a tab change rather than
+to rendering, and that keyframes touch only composited properties. It cannot check whether any of
+it looks right. That is a phone job.
 
 ---
 

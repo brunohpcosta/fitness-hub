@@ -15,8 +15,12 @@ import os
 import sqlite3
 import sys
 
-STATE = os.path.expanduser(
-    "~/Documents/fitness-hub/fitness-hub-api/.wrangler/state/v3/d1/miniflare-D1DatabaseObject"
+# Located relative to this file, not to $HOME. The hardcoded ~/Documents path
+# resolved only on one machine; anywhere else the suite reported "no database"
+# when the database was sitting right there.
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+STATE = os.path.join(
+    REPO, "fitness-hub-api", ".wrangler", "state", "v3", "d1", "miniflare-D1DatabaseObject"
 )
 matches = [p for p in glob.glob(os.path.join(STATE, "*.sqlite")) if "metadata" not in p]
 if not matches:
@@ -51,6 +55,32 @@ for g in goals:
     g["state"] = "tracked_only" if g["target_value"] is None else "ok"
     g["sample"], g["sample_unit"], g["confidence"] = 7, "days", None
 
+# The settings the Worker exposes on /api/today, read from the database rather
+# than typed out here.
+#
+# This list was previously a hardcoded stub with three keys in it. When the
+# body-fat calibration was added the Worker started returning four more, the
+# stub was not updated, and the fixture went on describing a world that no
+# longer existed — so normLean() had no conversion factor and the test that
+# exists specifically to prove lean is derived from converted fat was failing
+# for a reason that had nothing to do with lean mass.
+#
+# Keep this in step with the `settings:` block in fitness-hub-api/src/index.js.
+# test/render-assert.js checks that it is.
+EXPOSED_SETTINGS = [
+    "maintenance_kcal_estimate",
+    "maintenance_basis",
+    "goal_weight_kg",
+    "taper_starts",
+    "targets_review_due",
+    "bf_zepp_to_withings_factor",
+    "bf_calibration_anchor_zepp",
+    "bf_calibration_ci_points",
+    "body_fat_reference_device",
+]
+all_settings = {r["key"]: r["value"] for r in q("SELECT key, value FROM settings")}
+settings = {k: all_settings.get(k) for k in EXPOSED_SETTINGS}
+
 today_row = q("SELECT * FROM v_daily WHERE local_date <= ? ORDER BY local_date DESC LIMIT 1", TODAY)
 targets = q("SELECT * FROM nutrition_targets WHERE day_type='training' ORDER BY effective_from DESC LIMIT 1")
 intake = q("SELECT * FROM v_daily_intake ORDER BY local_date DESC LIMIT 1")
@@ -68,8 +98,7 @@ print(json.dumps({
         "race": {"date": "2026-08-22", "label": "Solo 42.195 km", "distance_km": 42.195,
                  "target_minutes": 240, "fuel_g_per_hour": 65, "gel_carbs_g": 23.5, "days_to": 10},
         "freshness": {"status": "ok", "hours_since": 2, "last_sync": "2026-08-12 09:41:54"},
-        "settings": {"maintenance_kcal_estimate": "2200", "goal_weight_kg": "76",
-                     "taper_starts": "2026-08-17"},
+        "settings": settings,
     },
     "plan": plan,
     "runs": q("SELECT * FROM v_run_readiness WHERE local_date >= '2026-05-01' ORDER BY local_date DESC"),

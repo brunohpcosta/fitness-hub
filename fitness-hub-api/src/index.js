@@ -721,6 +721,12 @@ async function handleToday(request, env) {
       goal_weight_kg: settings.goal_weight_kg ?? null,
       taper_starts: settings.taper_starts ?? null,
       targets_review_due: settings.targets_review_due ?? null,
+      // Body-fat device calibration, so the app can put Zepp Life readings on
+      // the Withings scale without duplicating the constant.
+      bf_zepp_to_withings_factor: settings.bf_zepp_to_withings_factor ?? null,
+      bf_calibration_anchor_zepp: settings.bf_calibration_anchor_zepp ?? null,
+      bf_calibration_ci_points: settings.bf_calibration_ci_points ?? null,
+      body_fat_reference_device: settings.body_fat_reference_device ?? null,
     },
   });
 }
@@ -993,6 +999,18 @@ async function handlePhotoList(env) {
 
   out.sort((a, b) => String(b.local_date).localeCompare(String(a.local_date)));
 
+  // Attach any notes. Keyed on date and view, same as the photos themselves.
+  const { results: notes } = await env.DB.prepare(
+    `SELECT local_date, view, note, comparable FROM photo_notes`
+  ).all();
+  const noteBy = {};
+  for (const n of notes) noteBy[`${n.local_date}|${n.view}`] = n;
+  for (const p of out) {
+    const n = noteBy[`${p.local_date}|${p.view}`];
+    p.note = n?.note ?? null;
+    p.comparable = n?.comparable ?? null;
+  }
+
   const dates = [...new Set(out.filter((p) => p.local_date).map((p) => p.local_date))];
   const views = [...new Set(out.filter((p) => p.view).map((p) => p.view))];
 
@@ -1004,6 +1022,84 @@ async function handlePhotoList(env) {
     unparsed: out.filter((p) => !p.local_date).length,
     photos: out,
   });
+}
+
+/**
+ * Upload a photo from the phone.
+ *
+ * The key is built here from a date and a view rather than trusted from the
+ * client, so nothing can be written outside the naming scheme the rest of the
+ * app relies on. A key that does not parse is a photo the comparison view can
+ * never find again.
+ */
+async function handlePhotoUpload(request, env) {
+  const { searchParams } = new URL(request.url);
+  const date = safeDate(searchParams.get('date'), null);
+  const view = String(searchParams.get('view') || '').toLowerCase().replace(/[^a-z]/g, '');
+
+  if (!date) return Response.json({ error: 'date must be YYYY-MM-DD' }, { status: 400 });
+  if (!view) return Response.json({ error: 'view is required, e.g. front' }, { status: 400 });
+
+  const today = sydneyDate(new Date());
+  if (date > today) return Response.json({ error: 'Cannot file a photo in the future', today }, { status: 400 });
+
+  const ct = request.headers.get('content-type') || 'image/jpeg';
+  if (!ct.startsWith('image/')) {
+    return Response.json({ error: 'Body must be an image', got: ct }, { status: 400 });
+  }
+
+  const bytes = await request.arrayBuffer();
+  if (!bytes.byteLength) return Response.json({ error: 'Empty body' }, { status: 400 });
+  if (bytes.byteLength > 12 * 1024 * 1024) {
+    return Response.json({ error: 'Image over 12 MB', bytes: bytes.byteLength }, { status: 413 });
+  }
+
+  const ext = ct.includes('png') ? 'png' : 'jpg';
+  const key = `${date}-${view}.${ext}`;
+
+  // An existing key is replaced, not duplicated — retaking a photo for a day
+  // should correct it rather than leave two.
+  const existing = await env.PHOTOS.head(key);
+
+  await env.PHOTOS.put(key, bytes, { httpMetadata: { contentType: ct } });
+
+  return Response.json({
+    ok: true, key, bytes: bytes.byteLength, replaced: !!existing,
+  });
+}
+
+/** A written note against one photo. Never anything numeric about the body. */
+async function handlePhotoNote(request, env) {
+  let body;
+  try { body = await request.json(); }
+  catch { return Response.json({ error: 'Body must be JSON' }, { status: 400 }); }
+
+  const date = safeDate(body?.local_date, null);
+  const view = String(body?.view || '').toLowerCase().replace(/[^a-z]/g, '');
+  if (!date || !view) return Response.json({ error: 'local_date and view are required' }, { status: 400 });
+
+  let comparable = null;
+  if (body?.comparable != null && body.comparable !== '') {
+    const c = Number(body.comparable);
+    if (c !== 0 && c !== 1) return Response.json({ error: 'comparable must be 0 or 1' }, { status: 400 });
+    comparable = c;
+  }
+  const note = textOrNull(body?.note, 1000);
+
+  await env.DB.prepare(
+    `INSERT INTO photo_notes (local_date, view, note, comparable, source)
+     VALUES (?, ?, ?, ?, 'app')
+     ON CONFLICT (local_date, view) DO UPDATE SET
+       note       = COALESCE(excluded.note,       photo_notes.note),
+       comparable = COALESCE(excluded.comparable, photo_notes.comparable),
+       updated_at = datetime('now')`
+  ).bind(date, view, note, comparable).run();
+
+  const row = await env.DB.prepare(
+    `SELECT * FROM photo_notes WHERE local_date = ? AND view = ?`
+  ).bind(date, view).first();
+
+  return Response.json({ ok: true, note: row });
 }
 
 async function handlePhoto(request, env) {
@@ -1329,6 +1425,12 @@ export default {
 
     if (url.pathname === '/api/photo' && request.method === 'GET')
       return cors(await handlePhoto(request, env));
+
+    if (url.pathname === '/api/photo' && request.method === 'POST')
+      return cors(await handlePhotoUpload(request, env));
+
+    if (url.pathname === '/api/photo-note' && request.method === 'POST')
+      return cors(await handlePhotoNote(request, env));
 
     if (url.pathname === '/api/log' && request.method === 'POST')
       return cors(await handleLog(request, env));

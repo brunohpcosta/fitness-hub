@@ -27,3 +27,7 @@ echo
 
 node "$HERE/render-harness.js"
 node "$HERE/render-assert.js"
+
+echo
+echo "── theme and accessibility ──"
+node "$HERE/theme-audit.js" "$APP"

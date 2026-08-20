@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Fitness Hub">
@@ -12,28 +12,139 @@
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="icon" href="./icon-192.png">
 <style>
-:root{
+/* ─────────────────────────── theme ───────────────────────────
+   Every colour is a token. Nothing hardcoded anywhere else, because a single
+   stray hex is all it takes for one theme to look broken — an audit found
+   twenty of them before this was written.
+
+   Colours were chosen by measuring contrast, not by eye. Everything carrying
+   text meets WCAG AA (4.5:1) against the surface it sits on. That audit also
+   caught a real bug in the dark theme as shipped: --t3 was #5e5e6c, which is
+   2.91:1 on a card — below even the 3:1 large-text floor — and it is the
+   colour every explanatory note in this app is written in.
+
+   Dark is the default. Light is applied by [data-theme="light"], set from the
+   system preference or overridden by hand. */
+:root, [data-theme="dark"]{
   --bg:#0a0a0c; --s1:#131317; --s2:#1a1a20; --s3:#22222a;
-  --t1:#f4f4f6; --t2:#9494a2; --t3:#5e5e6c;
+  --t1:#f4f4f6; --t2:#9494a2; --t3:#82828d;      /* t3 raised from #5e5e6c: 2.91 -> 4.88 */
   --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.14);
-  --accent:#fa114f; --accent-dim:rgba(250,17,79,.13);
+  --accent:#fa114f; --accent-dim:rgba(250,17,79,.13); --accent-strong:#ff3d6d;
+  /* The brand accent is 3.99:1 against white — fine for large text, short of AA
+     for a 13px button label. Filled buttons use a slightly deeper shade so the
+     label passes, while the accent itself stays the brand colour everywhere
+     it is used as text, borders and highlights. */
+  --accent-fill:#e00e46; --on-accent:#fff;
   --blue:#4d9fff; --green:#2ecc9b; --amber:#ffb020; --violet:#9b7bff; --teal:#3ad3d3;
+
+  --chrome:rgba(10,10,12,.88);          /* sticky header and bottom nav */
+  --chrome-solid:#0a0a0c;
+  --overlay:rgba(0,0,0,.66);
+  --gridline:rgba(255,255,255,.06);
+  --axlab:#82828d;
+  --thumb-shadow:0 1px 4px rgba(0,0,0,.5);
+  --card-shadow:none;
+  /* Floating things need a shadow even in the dark theme, where flat cards do
+     not — it is what separates them from the page rather than decorates them. */
+  --lift-shadow:0 8px 28px rgba(0,0,0,.55);
+
+  --warn-bg:rgba(255,176,32,.07);  --warn-text:#ffc95e;
+  --ok-bg:rgba(46,204,155,.07);    --ok-text:#6fe0bd;
+  --info-bg:rgba(77,159,255,.07);  --info-text:#9cc9ff;
+  --pill-red:rgba(250,17,79,.14);   --pill-green:rgba(46,204,155,.13);
+  --pill-amber:rgba(255,176,32,.13);--pill-blue:rgba(77,159,255,.13);
+  --needed-bg:rgba(250,17,79,.06);
+  --heat-run:77,159,255; --heat-lift:155,123,255;
+
   /* System stack rather than a CDN webfont: nothing to fetch, so the app renders
      identically with no signal. On iOS this resolves to SF Pro / SF Mono. */
   --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Inter,sans-serif;
   --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,'JetBrains Mono',monospace;
   --r:10px; --rc:16px;
+
+  /* ── motion ──
+     Tokens rather than numbers scattered through the file, so the whole app
+     moves at one speed and with one personality.
+
+     Durations are short on purpose. UI motion above ~300ms reads as sluggish
+     however pretty it looks; the job is to show where something came from,
+     not to be admired.
+
+     --e-out   things arriving: fast, then settle
+     --e-in    things leaving: start gently, then go
+     --e-spring a small overshoot, for presses and taps only */
+  --t-fast:120ms; --t-base:190ms; --t-slow:280ms; --t-bar:450ms;
+  --e-out:cubic-bezier(.22,1,.36,1);
+  --e-in:cubic-bezier(.55,0,1,.45);
+  --e-spring:cubic-bezier(.34,1.4,.64,1);
+}
+
+[data-theme="light"]{
+  --bg:#f7f7f9; --s1:#ffffff; --s2:#f0f0f3; --s3:#e5e5ea;
+  --t1:#16161a; --t2:#55555f; --t3:#6f6f78;      /* 18.0 / 7.4 / 5.0 on white */
+  --line:rgba(0,0,0,.09); --line2:rgba(0,0,0,.17);
+  --accent:#d60b43; --accent-dim:rgba(214,11,67,.09); --accent-strong:#b00836;
+  --accent-fill:#d60b43; --on-accent:#fff;        /* 5.27:1 on the fill */
+  --blue:#1668d6; --green:#0f7358; --amber:#a86400; --violet:#6d4fd0; --teal:#0a7b81;
+
+  --chrome:rgba(247,247,249,.88);
+  --chrome-solid:#f7f7f9;
+  --overlay:rgba(22,22,26,.42);
+  --gridline:rgba(0,0,0,.07);
+  --axlab:#6f6f78;
+  --thumb-shadow:0 1px 4px rgba(0,0,0,.22);
+  --card-shadow:0 1px 2px rgba(0,0,0,.04);
+  --lift-shadow:0 8px 28px rgba(22,22,26,.18);
+
+  --warn-bg:rgba(168,100,0,.09);   --warn-text:#8f5500;
+  --ok-bg:rgba(15,115,88,.09);     --ok-text:#0f7358;
+  --info-bg:rgba(22,104,214,.08);  --info-text:#0b5cc4;
+  --pill-red:rgba(214,11,67,.11);   --pill-green:rgba(15,115,88,.12);
+  --pill-amber:rgba(168,100,0,.12); --pill-blue:rgba(22,104,214,.11);
+  --needed-bg:rgba(214,11,67,.05);
+  --heat-run:22,104,214; --heat-lift:109,79,208;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ── pinch zoom ──
+   pan-x pan-y permits scrolling on both axes and nothing else, which removes
+   the pinch gesture. NOT `manipulation` — that one explicitly still allows
+   pinch-zoom and only suppresses double-tap, which is why the first attempt at
+   this did nothing.
+
+   The viewport meta is deliberately left alone: iOS has ignored user-scalable
+   since iOS 10, so adding it would be cargo cult. touch-action is the
+   mechanism that actually works.
+
+   Trade-off, stated plainly: nothing in the app can be magnified any more.
+   That is acceptable here because it is a single-user app and the one thing
+   worth magnifying — a progress photo — opens full-screen on tap instead.
+   Reverting is one line: change pan-x pan-y back to manipulation. */
+html,body{touch-action:pan-x pan-y}
+button,.row.tap,.cd.tap,.slot,label{touch-action:pan-x pan-y}
+html,body{height:100%;overflow-x:hidden;max-width:100%}
+body{background:var(--bg);color:var(--t1);font-family:var(--sans);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow-wrap:anywhere;word-break:normal}
+.num{overflow-wrap:anywhere}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+/* ── iOS zoom ──
+   Safari zooms the viewport whenever a form control under 16px is focused, and
+   then does not zoom back out. That is the accidental zoom.
+
+   user-scalable=no does NOT fix it — iOS has ignored that since iOS 10, on
+   purpose, because blocking pinch-zoom breaks the app for anyone who needs it.
+   16px is the real fix and costs nothing: one pixel larger than the body text.
+
+   touch-action is set to pan-x pan-y above, which removes both the pinch and
+   the double-tap zoom gestures while leaving scrolling intact. */
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit;
+  touch-action:pan-x pan-y}
+html{-webkit-text-size-adjust:100%}
 button{cursor:pointer;background:none;border:none}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
 
 #shell{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
-#top{position:sticky;top:0;z-index:40;background:rgba(10,10,12,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+#top{position:sticky;top:0;z-index:40;background:var(--chrome);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .wrap{max-width:1180px;margin:0 auto;width:100%}
 .topin{padding:12px 18px 0}
 .tophead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
@@ -41,10 +152,9 @@ button{cursor:pointer;background:none;border:none}
 h1{font-size:25px;font-weight:600;letter-spacing:-.025em;line-height:1.15;margin-top:2px}
 .sync{font-size:11px;color:var(--t3);margin-top:3px;display:flex;align-items:center;gap:5px}
 .dot{width:5px;height:5px;border-radius:50%;background:var(--amber);flex:none}
-.protobadge{font-size:10px;letter-spacing:.09em;color:var(--amber);border:1px solid rgba(255,176,32,.3);background:rgba(255,176,32,.07);padding:4px 8px;border-radius:20px;white-space:nowrap;flex:none}
 
-#rail{display:flex;gap:4px;padding:14px 18px 10px;overflow-x:auto;scrollbar-width:none}
-#rail::-webkit-scrollbar{display:none}
+#rail,.railstrip{display:flex;gap:4px;padding:14px 18px 10px;overflow-x:auto;scrollbar-width:none}
+#rail::-webkit-scrollbar,.railstrip::-webkit-scrollbar{display:none}
 .rd{flex:1;min-width:46px;border-top:2px solid var(--line);padding:9px 2px 0;text-align:left;display:block;border-radius:0}
 .rd.today{border-top-color:var(--accent)}
 .rd .rl{display:block;font-size:10px;letter-spacing:.1em;color:var(--t3)}
@@ -80,9 +190,9 @@ h1{font-size:25px;font-weight:600;letter-spacing:-.025em;line-height:1.15;margin
 .tile .tv{font-size:19px;font-weight:600;letter-spacing:-.03em;line-height:1}
 .tile .tsub{font-size:11px;color:var(--t3);margin-top:4px}
 
-.btn{border:1px solid var(--line2);border-radius:var(--r);padding:9px 14px;font-size:13px;font-weight:500;transition:background .12s}
+.btn{border:1px solid var(--line2);border-radius:var(--r);padding:9px 14px;font-size:13px;font-weight:500;transition:background var(--t-fast)}
 .btn:hover{background:var(--s3)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
 .btn.f{flex:1;text-align:center}
 
 input[type=text],input[type=number],select{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;outline:none}
@@ -92,7 +202,7 @@ label.fl{display:block;font-size:11px;color:var(--t2);margin-bottom:5px}
 
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;height:22px}
 input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--s3);border-radius:2px}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--t1);margin-top:-8px;border:none;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--t1);margin-top:-8px;border:none;box-shadow:var(--thumb-shadow)}
 input[type=range]::-moz-range-track{height:4px;background:var(--s3);border-radius:2px}
 input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--t1);border:none}
 .sl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
@@ -103,9 +213,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .seg button{flex:1;padding:7px 4px;font-size:12px;font-weight:500;color:var(--t2);border-radius:7px}
 .seg button.on{background:var(--s3);color:var(--t1)}
 
-.warn{border-left:2px solid var(--amber);background:rgba(255,176,32,.07);padding:9px 12px;font-size:12px;color:#ffc95e;line-height:1.55;margin-bottom:8px}
-.ok{border-left:2px solid var(--green);background:rgba(46,204,155,.07);padding:9px 12px;font-size:12px;color:#6fe0bd;line-height:1.55;margin-bottom:8px;border-radius:0 var(--r) var(--r) 0}
-.info{border-left:2px solid var(--blue);background:rgba(77,159,255,.07);padding:9px 12px;font-size:12px;color:#9cc9ff;line-height:1.55;margin-bottom:8px}
+.warn{border-left:2px solid var(--amber);background:var(--warn-bg);padding:9px 12px;font-size:12px;color:var(--warn-text);line-height:1.55;margin-bottom:8px}
+.ok{border-left:2px solid var(--green);background:var(--ok-bg);padding:9px 12px;font-size:12px;color:var(--ok-text);line-height:1.55;margin-bottom:8px;border-radius:0 var(--r) var(--r) 0}
+.info{border-left:2px solid var(--blue);background:var(--info-bg);padding:9px 12px;font-size:12px;color:var(--info-text);line-height:1.55;margin-bottom:8px}
 .note{font-size:11px;color:var(--t3);line-height:1.6;margin-top:10px}
 
 .tlbar{position:relative;height:28px;background:var(--s2);border-radius:var(--r);margin-top:8px}
@@ -115,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 
 .sched{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin-top:10px}
 .sched span{background:var(--s2);border-radius:8px;padding:7px 4px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--t2)}
-.sched span.caf{color:var(--amber);background:rgba(255,176,32,.09)}
+.sched span.caf{color:var(--amber);background:var(--pill-amber)}
 
 .stub{border:1px dashed var(--line2);border-radius:var(--rc);padding:26px 18px;text-align:center;color:var(--t3);font-size:13px;line-height:1.7}
 .stub b{display:block;color:var(--t2);font-weight:500;font-size:14px;margin-bottom:5px}
@@ -138,10 +248,11 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .exc:last-child{border-bottom:none}
 .exc .eh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .exc .en{font-size:14px;font-weight:500}
-.exc .eset{font-size:12px;color:var(--t2);white-space:nowrap;font-family:var(--mono)}
+.exc .eset{font-size:12px;color:var(--t2);white-space:nowrap;font-family:var(--mono);
+  flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis}
 .exc .enote{font-size:11.5px;color:var(--t3);margin-top:4px}
 
-#sheet{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.66);backdrop-filter:blur(7px)}
+#sheet{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:18px;background:var(--overlay);backdrop-filter:blur(7px)}
 #sheet.open{display:flex}
 #sheetcard{background:var(--s1);border:1px solid var(--line);border-radius:var(--rc);padding:17px 18px;width:100%;max-width:420px;max-height:86vh;overflow-y:auto}
 #gear{background:none;border:none;padding:6px;margin:2px -6px 0 8px;color:var(--t2);flex:none}
@@ -162,14 +273,14 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .row .rval b{color:var(--t1);font-weight:600}
 .row.missed .rt{color:var(--t2)}
 .pill{display:inline-block;font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
-.pill.red{background:rgba(250,17,79,.14);color:var(--accent)}
-.pill.green{background:rgba(46,204,155,.13);color:var(--green)}
-.pill.amber{background:rgba(255,176,32,.13);color:var(--amber)}
-.pill.blue{background:rgba(77,159,255,.13);color:var(--blue)}
+.pill.red{background:var(--pill-red);color:var(--accent)}
+.pill.green{background:var(--pill-green);color:var(--green)}
+.pill.amber{background:var(--pill-amber);color:var(--amber)}
+.pill.blue{background:var(--pill-blue);color:var(--blue)}
 
 svg.chart{display:block;width:100%;height:auto;overflow:visible}
-.gridline{stroke:rgba(255,255,255,.06);stroke-width:1}
-.axlab{fill:#5e5e6c;font-size:9px;font-family:var(--mono)}
+.gridline{stroke:var(--gridline);stroke-width:1}
+.axlab{fill:var(--axlab);font-size:9px;font-family:var(--mono)}
 /* Bar chart as a grid, not flex. All three rows share the same column
    template, so values, bars and labels cannot drift apart — which is exactly
    what happened when the value row was flex without flex:1 and the numbers
@@ -179,7 +290,11 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
   white-space:nowrap;overflow:hidden}
 .chartgrid .cb{height:110px;display:flex;flex-direction:column;justify-content:flex-end}
 .chartgrid .cb i{display:block;background:var(--blue);border-radius:3px 3px 0 0;min-height:3px;
-  transition:height .3s cubic-bezier(.22,1,.36,1)}
+  transition:height var(--t-slow) var(--e-out);
+  /* Set here, not in the keyframe. transform-origin inside @keyframes is an
+     animated property in its own right and does not reliably hold, which makes
+     the bar grow outwards from its middle instead of up from the axis. */
+  transform-origin:bottom}
 .chartgrid .cb.now i{background:var(--accent)}
 .chartgrid .cl{text-align:center;font-size:9px;color:var(--t3);line-height:1.25;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -187,19 +302,19 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 
 /* modal */
 #modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
-  padding:18px;background:rgba(0,0,0,.66);backdrop-filter:blur(7px)}
-#modal.open{display:flex;animation:fadeIn .18s ease both}
+  padding:18px;background:var(--overlay);backdrop-filter:blur(7px)}
+#modal.open{display:flex;animation:fadeIn var(--t-fast) var(--e-out) both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 #modalcard{background:var(--s1);border:1px solid var(--line2);border-radius:20px;max-width:440px;
   width:100%;max-height:86vh;overflow-y:auto;padding:20px;
-  animation:modalIn .26s cubic-bezier(.22,1,.36,1) both}
+  animation:modalIn var(--t-slow) var(--e-out) both}
 #modalcard .mh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
 #modalcard .mt{font-size:19px;font-weight:600;letter-spacing:-.02em}
 #modalcard .msub{font-size:12px;color:var(--t3);margin-top:2px}
 .mnav{display:flex;gap:5px;align-items:center;flex:none}
-.mnav button{width:30px;height:30px;border-radius:50%;background:var(--s3);color:var(--t2);
-  font-size:14px;line-height:1;transition:background .14s,color .14s}
+.mnav button{width:38px;height:38px;border-radius:50%;background:var(--s3);color:var(--t2);
+  font-size:14px;line-height:1;transition:background var(--t-fast),color var(--t-fast)}
 .mnav button:hover{background:var(--line2);color:var(--t1)}
 .mblock{border-radius:var(--r);background:var(--s2);padding:12px 13px;margin-bottom:9px}
 .mblock .mbh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -226,8 +341,8 @@ body.locked{overflow:hidden}
 .calhead .cmn{font-size:16px;font-weight:600;letter-spacing:-.02em}
 .calhead .cmy{font-size:11px;color:var(--t3);margin-top:1px}
 .calnav{display:flex;gap:4px}
-.calnav button{width:30px;height:30px;border-radius:8px;color:var(--t2);font-size:15px;line-height:1;
-  background:var(--s2);transition:background .14s,color .14s}
+.calnav button{width:38px;height:38px;border-radius:8px;color:var(--t2);font-size:15px;line-height:1;
+  background:var(--s2);transition:background var(--t-fast),color var(--t-fast)}
 .calnav button:hover{background:var(--s3);color:var(--t1)}
 .calnav button:disabled{opacity:.3;cursor:default}
 .calstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px}
@@ -235,7 +350,7 @@ body.locked{overflow:hidden}
 .calstat .csl{font-size:10px;color:var(--t3);margin-bottom:3px}
 .calstat .csv{font-size:15px;font-weight:600;letter-spacing:-.02em}
 .cd .cheat{position:absolute;inset:0;pointer-events:none}
-.cd.tap{cursor:pointer;transition:transform .16s cubic-bezier(.34,1.4,.64,1),border-color .14s}
+.cd.tap{cursor:pointer;transition:transform var(--t-base) var(--e-spring),border-color var(--t-fast)}
 .cd.tap:hover{transform:translateY(-2px) scale(1.07);border-color:var(--line2);z-index:2;color:var(--t1)}
 .cd.miss::after{content:'';position:absolute;top:5px;right:5px;width:4px;height:4px;border-radius:50%;
   background:var(--accent);z-index:1}
@@ -256,6 +371,61 @@ body.locked{overflow:hidden}
 .callegend span{display:flex;align-items:center;gap:5px}
 .callegend i{width:6px;height:6px;border-radius:50%;display:block}
 
+/* photo comparison — always two columns, including on the phone */
+.pview{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.pcol select{margin-bottom:8px;font-size:16px;padding:7px 8px}
+/* No aspect-ratio and no object-fit:cover. Cover fills the frame by cropping
+   whatever does not fit, which was cutting the top of the chest off. The whole
+   body has to be visible or the comparison is worthless. Natural height means
+   both photos keep their real proportions, and since they come from the same
+   camera they line up anyway. */
+.pcol img{width:100%;height:auto;display:block;border-radius:var(--r);
+  background:var(--s2);cursor:zoom-in}
+.phbox{aspect-ratio:3/4;background:var(--s2);border:1px solid var(--line);border-radius:var(--r);
+  display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:11px;text-align:center;padding:8px}
+#photofull{max-width:100%;max-height:76vh;width:auto;display:block;margin:0 auto;border-radius:var(--r)}
+
+.capline{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.capline .capl{font-size:11px;color:var(--t3);flex:none}
+.capline .capv{font-size:11px;text-align:right}
+.pmeta{margin-top:8px}
+.pmeta div{display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;gap:6px}
+.pmeta div span:first-child{color:var(--t2)}
+.pmeta div span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.pmeta .na{color:var(--t3)}
+.pmeta .est{color:var(--t2);font-style:italic}
+.pmeta-est{opacity:.9}
+.estnote{font-size:10.5px;color:var(--t3);line-height:1.5;margin-top:5px;
+  padding-left:7px;border-left:2px solid var(--line2)}
+
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.slot{position:relative;aspect-ratio:3/4;border-radius:var(--r);background:var(--s2);
+  border:1.5px dashed var(--line2);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:6px;color:var(--t3);font-size:11px;overflow:hidden;cursor:pointer;
+  transition:border-color var(--t-fast)}
+.slot:active{border-color:var(--accent)}
+.slot.filled{border-style:solid;border-color:var(--green)}
+.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.slot .slabel{position:absolute;bottom:0;left:0;right:0;padding:5px 6px;font-size:10px;
+  background:var(--chrome);color:var(--t2);text-align:center;letter-spacing:.04em}
+.slot .stick{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;
+  background:var(--green);color:var(--bg);font-size:11px;display:none;align-items:center;
+  justify-content:center;z-index:2}
+.slot.filled .stick{display:flex}
+.slot input{display:none}
+.notebox{display:flex;gap:8px;margin-top:10px}
+.notebox input{flex:1}
+
+/* an incomplete check-in should be impossible to miss */
+.rblock.needed,.fieldrow.needed{background:var(--needed-bg);
+  box-shadow:inset 2px 0 0 var(--accent);border-radius:0 6px 6px 0;padding-left:9px}
+#gateblock{padding:34px 20px;text-align:center}
+#gateblock .gi{width:46px;height:46px;border-radius:50%;background:var(--accent-dim);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--accent);font-size:22px}
+#gateblock h2{font-size:19px;font-weight:600;letter-spacing:-.02em;margin-bottom:8px}
+#gateblock p{font-size:13.5px;color:var(--t2);line-height:1.65;max-width:330px;margin:0 auto 16px}
+
 .rblock{padding:10px 0;border-bottom:1px solid var(--line)}
 .rblock:last-of-type{border-bottom:none}
 .rlab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
@@ -272,8 +442,8 @@ body.locked{overflow:hidden}
 .morebtn{width:100%;text-align:center;font-size:13px;color:var(--t2);padding:11px 0;border-top:1px solid var(--line);margin-top:4px}
 .queued{font-size:11px;color:var(--amber);margin-top:8px}
 
-#nav{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;background:rgba(10,10,12,.92);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-#nav button{flex:1;padding:8px 1px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:8.5px;color:var(--t3);min-width:0}
+#nav{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;background:var(--chrome);backdrop-filter:blur(16px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#nav button{flex:1;padding:9px 1px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;letter-spacing:-.02em;color:var(--t3);min-width:0;min-height:52px}
 #nav button.on{color:var(--accent)}
 #nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
@@ -288,7 +458,167 @@ body.locked{overflow:hidden}
   #nav{display:none}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
 }
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ── motion and feedback ──
+   Every tappable thing should acknowledge the tap. On a phone there is no
+   hover, so without :active the interface feels dead even when it is working. */
+button,.row.tap,.cd.tap{transition:transform var(--t-fast) var(--e-spring),
+  background var(--t-fast) ease,border-color var(--t-fast) ease,
+  color var(--t-fast) ease,opacity var(--t-fast) ease,box-shadow var(--t-base) ease}
+.btn:active,#nav button:active,#side button:active,.rate button:active,
+.seg button:active,.calnav button:active,.mnav button:active{transform:scale(.95)}
+.row.tap:active{transform:scale(.99);background:var(--s2)}
+.cd.tap:active{transform:scale(.94)}
+
+/* ── entering a tab ──
+   The page fades up, then its cards follow in sequence. The stagger is what
+   makes it read as a considered layout rather than a screen being repainted.
+
+   Keyed to the .entering class, added on tab change and removed when it
+   finishes — NOT to rendering. The Hub re-renders on every refresh and
+   replaying an entrance each time would be maddening. */
+.page.on{animation:pageIn var(--t-fast) var(--e-out) both}
+@keyframes pageIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* Every direct child animates. On the two-column layouts the column wrapper
+   itself is skipped and its children animate instead, otherwise the whole
+   right-hand side would arrive as one slab. */
+.page.entering > *{animation:riseIn var(--t-base) var(--e-out) both}
+.page.entering > .cols{animation:none}
+.page.entering > .cols > div > *{animation:riseIn var(--t-base) var(--e-out) both}
+@keyframes riseIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+
+.page.entering > *:nth-child(1),
+.page.entering > .cols > div > *:nth-child(1){animation-delay:0ms}
+.page.entering > *:nth-child(2),
+.page.entering > .cols > div > *:nth-child(2){animation-delay:40ms}
+.page.entering > *:nth-child(3),
+.page.entering > .cols > div > *:nth-child(3){animation-delay:80ms}
+.page.entering > *:nth-child(4),
+.page.entering > .cols > div > *:nth-child(4){animation-delay:120ms}
+/* Capped. Beyond the fourth item the delay stops growing, so a long tab does
+   not become a slow reveal. */
+.page.entering > *:nth-child(n+5),
+.page.entering > .cols > div > *:nth-child(n+5){animation-delay:155ms}
+
+.cal .cd{animation:cellIn var(--t-slow) var(--e-out) both}
+@keyframes cellIn{from{opacity:0;transform:translateY(6px) scale(.94)}to{opacity:1;transform:none}}
+
+/* ── leaving ──
+   A modal that simply vanishes feels like a bug. Closing runs the reverse and
+   the element is hidden after it, so the exit is actually seen. */
+#modal.closing{animation:fadeOut var(--t-fast) var(--e-in) both}
+#modal.closing #modalcard{animation:modalOut var(--t-fast) var(--e-in) both}
+@keyframes fadeOut{to{opacity:0}}
+@keyframes modalOut{to{opacity:0;transform:translateY(10px) scale(.98)}}
+
+/* ── the settings sheet ──
+   Slides up from the bottom edge, which is where it belongs on a phone and
+   what every native sheet does. */
+#sheet{align-items:flex-end;padding:0}
+#sheetcard{border-radius:var(--rc) var(--rc) 0 0;max-width:520px;
+  max-height:88vh;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+#sheet.open #sheetcard{animation:sheetIn var(--t-slow) var(--e-out) both}
+#sheet.closing{animation:fadeOut var(--t-fast) var(--e-in) both}
+#sheet.closing #sheetcard{animation:sheetOut var(--t-base) var(--e-in) both}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheetOut{to{transform:translateY(100%)}}
+/* A grab handle. It does nothing — the sheet is not draggable — but it tells
+   you which edge this came from, which is the whole point of the affordance. */
+#sheetcard::before{content:"";display:block;width:36px;height:4px;border-radius:2px;
+  background:var(--line2);margin:-6px auto 13px}
+/* On a wide screen it is a centred dialog again; a bottom sheet on a desktop
+   monitor is a phone idiom in the wrong place. */
+@media(min-width:900px){
+  #sheet{align-items:center;padding:18px}
+  #sheetcard{border-radius:var(--rc);padding-bottom:18px}
+  #sheetcard::before{display:none}
+  #sheet.open #sheetcard{animation:modalIn var(--t-slow) var(--e-out) both}
+  #sheet.closing #sheetcard{animation:modalOut var(--t-fast) var(--e-in) both}
+}
+
+/* ── toast ──
+   Confirmation should be felt, not hunted for. Comes down from the top, holds,
+   and leaves on its own. */
+#toast{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;z-index:300;
+  transform:translateX(-50%);background:var(--s1);border:1px solid var(--line2);
+  border-radius:24px;padding:10px 18px;font-size:14px;font-weight:500;
+  box-shadow:var(--lift-shadow);display:none;white-space:nowrap;max-width:88vw;
+  overflow:hidden;text-overflow:ellipsis}
+#toast.on{display:block;animation:toastIn var(--t-slow) var(--e-spring) both}
+#toast.off{animation:toastOut var(--t-base) var(--e-in) both}
+#toast .tdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;
+  background:var(--green);vertical-align:middle}
+#toast.warn .tdot{background:var(--amber)}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-18px) scale(.94)}
+                   to{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes toastOut{to{opacity:0;transform:translate(-50%,-14px) scale(.96)}}
+
+/* ── nav ──
+   The selected icon lifts very slightly. Enough to register, not enough to
+   notice consciously. */
+#nav button svg,#side button svg{transition:transform var(--t-base) var(--e-spring)}
+#nav button.on svg{transform:translateY(-2px) scale(1.08)}
+#side button.on svg{transform:scale(1.08)}
+
+/* ── photos ──
+   Crossfade when the date or view changes, rather than a blank frame then a
+   new image. */
+.pcol img{animation:imgIn var(--t-slow) var(--e-out) both}
+@keyframes imgIn{from{opacity:0}to{opacity:1}}
+
+/* Bars and chart columns grow from nothing on first paint. */
+.chartgrid .cb i{animation:growUp var(--t-slow) var(--e-out) both}
+@keyframes growUp{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+
+/* Bars and progress grow into place. Slower than the rest on purpose — this is
+   the one place the motion carries meaning rather than just softening a change,
+   so it is given long enough to be read as a quantity moving. */
+.bar i,.mstack i{transition:width var(--t-bar) var(--e-out)}
+
+/* Loading placeholders that look like the thing that is coming, rather than
+   the word "Loading". */
+.skel{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 37%,var(--s2) 63%);
+  background-size:400% 100%;animation:shimmer 1.3s ease infinite;border-radius:6px;
+  height:12px;margin-bottom:8px}
+.skel.tall{height:96px;border-radius:var(--r)}
+.skel.w60{width:60%} .skel.w40{width:40%}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:0 0}}
+
+/* The check-in gate. It blocks the app, so it should arrive with weight —
+   scaling in from slightly small reads as something being placed in front of
+   you rather than something that was always there. */
+#gate #gateblock{animation:gateIn var(--t-slow) var(--e-out) both}
+@keyframes gateIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:none}}
+#gate .gi{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.07);opacity:.85}}
+
+/* On a pointer device the card lifts a little under the cursor. Deliberately
+   absent on touch, where there is no hover and :hover sticks after a tap. */
+@media(hover:hover) and (pointer:fine){
+  .row.tap:hover{transform:translateY(-1px)}
+  .cd.tap:hover{transform:scale(1.06);z-index:1}
+  .btn:hover{filter:brightness(1.08)}
+}
+
+/* Honour the system setting. Anything that conveys state still does so through
+   colour and text, never through motion alone.
+
+   Note on what is deliberately NOT animated: numbers never count up. A rolling
+   figure shows values that were never measured, and this app does not display
+   a number it cannot stand behind — not even for 300ms. */
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;
+    animation-delay:0ms!important;transition-delay:0ms!important}
+}
+
+.themeseg{display:flex;gap:4px;background:var(--s2);padding:3px;border-radius:var(--r)}
+.themeseg button{flex:1;padding:9px 4px;font-size:12.5px;font-weight:500;color:var(--t2);border-radius:7px}
+.themeseg button.on{background:var(--s1);color:var(--t1);box-shadow:var(--card-shadow)}
+
+html{color-scheme:dark}
+[data-theme="light"]{color-scheme:light}
+body{transition:background var(--t-base) ease,color var(--t-base) ease}
+.card{box-shadow:var(--card-shadow)}
 </style>
 </head>
 <body>
@@ -313,6 +643,7 @@ body.locked{overflow:hidden}
 <div id="body">
   <nav id="side"></nav>
   <main id="main">
+    <div id="gate" style="display:none"></div>
 
     <!-- HUB — the 5am screen -->
     <!-- Order is deliberate: at 5am the first question is what you are doing
@@ -385,6 +716,9 @@ body.locked{overflow:hidden}
       <div class="seclab">current form</div>
       <div class="grid g2 wide" id="formtiles" style="margin-bottom:11px"></div>
       <div id="coachflags"></div>
+
+      <div class="seclab">what's coming</div>
+      <div id="nextruns"></div>
 
       <div class="cols">
         <div>
@@ -488,10 +822,10 @@ body.locked{overflow:hidden}
         <div>
           <div class="seclab">composition</div>
           <div class="card" id="bodycomp"></div>
-          <div class="seclab">scale reliability</div>
-          <div class="card" id="bodycapture"></div>
         </div>
       </div>
+      <div class="seclab">add photos</div>
+      <div class="card" id="photoupload"></div>
       <div class="seclab">photo comparison</div>
       <div class="card" id="bodyphotos"></div>
     </section>
@@ -510,6 +844,9 @@ body.locked{overflow:hidden}
   <div id="modalcard"></div>
 </div>
 
+<!-- transient confirmation, top centre. Aria-live so it is announced, not just seen. -->
+<div id="toast" role="status" aria-live="polite"></div>
+
 <!-- settings sheet — API address and key live here, in localStorage -->
 <div id="sheet">
   <div id="sheetcard">
@@ -521,7 +858,15 @@ body.locked{overflow:hidden}
     <button class="btn pri f" onclick="saveCfg()">Save and reload data</button>
     <div class="note">Stored only on this device, in this browser. Sent as a bearer token over HTTPS. Clearing Safari data removes it.</div>
     <div id="cfgstate" style="margin-top:11px"></div>
-    <div class="ch" style="margin-top:16px;margin-bottom:9px"><span class="ct">Offline support</span></div>
+    <div class="ch" style="margin-top:18px;margin-bottom:9px"><span class="ct">Appearance</span></div>
+    <div class="themeseg" id="themeseg">
+      <button data-t="auto"  onclick="setTheme('auto')">Auto</button>
+      <button data-t="light" onclick="setTheme('light')">Light</button>
+      <button data-t="dark"  onclick="setTheme('dark')">Dark</button>
+    </div>
+    <div class="note" id="themenote"></div>
+
+    <div class="ch" style="margin-top:18px;margin-bottom:9px"><span class="ct">Offline support</span></div>
     <div id="swstate"></div>
     <button class="btn f" style="margin-top:9px" onclick="checkOffline()">Re-check</button>
   </div>
@@ -551,6 +896,61 @@ function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function mmss(v){var m=Math.floor(v),s=Math.round((v-m)*60);if(s===60){m++;s=0;}return m+':'+String(s).padStart(2,'0');}
 function hm(mins){var h=Math.floor(mins/60),m=Math.round(mins%60);if(m===60){h++;m=0;}return h+':'+String(m).padStart(2,'0');}
+
+/* ─────────────────────────── theme ─────────────────────────── */
+/* auto | light | dark, remembered on the device. Auto follows the system and
+   keeps following it — if the phone switches at sunset, so does this. */
+var THEME='auto';
+var MQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+
+function effectiveTheme(){
+  if(THEME==='auto') return (MQ&&MQ.matches)?'light':'dark';
+  return THEME;
+}
+function applyTheme(){
+  var t=effectiveTheme();
+  document.documentElement.setAttribute('data-theme',t);
+  // The status bar and browser chrome should match, or the app looks pasted
+  // onto the phone rather than part of it.
+  var meta=document.querySelector('meta[name="theme-color"]');
+  // Read the value from the token rather than repeating it here — two places
+  // holding the same colour is how they drift apart.
+  if(meta){
+    var bg=getComputedStyle(document.documentElement).getPropertyValue('--chrome-solid').trim();
+    if(bg)meta.setAttribute('content',bg);
+  }
+  document.querySelectorAll('#themeseg button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.t===THEME);
+  });
+  var n=$('themenote');
+  if(n)n.textContent = THEME==='auto'
+    ? 'Following the system setting — currently '+t+'.'
+    : 'Fixed to '+THEME+', ignoring the system setting.';
+}
+function setTheme(t){
+  THEME=t;
+  try{localStorage.setItem('fh_theme',t);}catch(e){}
+  applyTheme();
+}
+function loadTheme(){
+  try{THEME=localStorage.getItem('fh_theme')||'auto';}catch(e){THEME='auto';}
+  applyTheme();
+  if(MQ){
+    var onChange=function(){ if(THEME==='auto')applyTheme(); };
+    if(MQ.addEventListener)MQ.addEventListener('change',onChange);
+    else if(MQ.addListener)MQ.addListener(onChange);
+  }
+}
+
+/* Placeholder that looks like the content it is standing in for. */
+function skeleton(rows,tall){
+  var s='';
+  if(tall)s+='<div class="skel tall"></div>';
+  for(var i=0;i<(rows||3);i++){
+    s+='<div class="skel'+(i%3===1?' w60':(i%3===2?' w40':''))+'"></div>';
+  }
+  return s;
+}
 
 /* ─────────────────────────── config and data ─────────────────────────── */
 /* The API address and key live in localStorage on this device. Nothing is
@@ -628,9 +1028,19 @@ function openSheet(){
   $('cfg-url').value=CFG.url||DEFAULT_API;
   $('cfg-key').value=CFG.key;
   $('cfgstate').innerHTML='';
-  $('sheet').classList.add('open');
+  var s=$('sheet');
+  clearTimeout(SHEET_CLOSE_T);
+  s.classList.remove('closing');
+  s.classList.add('open');
 }
-function closeSheet(){$('sheet').classList.remove('open');}
+var SHEET_CLOSE_T=null;
+function closeSheet(){
+  var s=$('sheet');
+  if(!s.classList.contains('open')||s.classList.contains('closing'))return;
+  if(!motionOK()){ s.classList.remove('open'); return; }
+  s.classList.add('closing');
+  SHEET_CLOSE_T=setTimeout(function(){ s.classList.remove('open','closing'); },190);
+}
 
 /* Cache the last good payload so the app opens with something on no signal.
    Marked stale on display — old data shown as current would be worse than none. */
@@ -725,7 +1135,7 @@ function refresh(){
   if(!CFG.url||!CFG.key){
     DATA=null;renderAll();return Promise.resolve();
   }
-  setSync('Loading…','warn');
+  setSync('Refreshing…','warn');
   return Promise.all([
     api('/api/today'),
     // The rail needs a week of plan rows. Failing this must not lose the Hub,
@@ -772,7 +1182,45 @@ function buildNav(){
   });
   $('nav').innerHTML=nb;$('side').innerHTML=sb;
 }
+/**
+ * The gate is a separate overlay, NOT a replacement for the tab's contents.
+ *
+ * The first version wrote the block screen into the tab's own innerHTML, which
+ * destroyed the real markup permanently. Completing the check-in lifted the
+ * gate and the tab was still empty, because the elements its renderer writes
+ * into no longer existed. Nothing recovers from that short of a reload.
+ */
+function renderGate(){
+  var el=$('gate');
+  if(!el)return;
+  if(!gateActive()){ el.style.display='none'; el.dataset.miss=''; return; }
+  var miss=missingFields((DATA&&DATA.actual)||{});
+  var key=miss.join('|');
+  // Refresh runs on every visibilitychange and after every save. Rewriting the
+  // markup each time would replay the entrance animation for no reason, so the
+  // rewrite only happens when the content has actually changed.
+  if(el.style.display==='block' && el.dataset.miss===key)return;
+  el.dataset.miss=key;
+  el.innerHTML=
+    '<div id="gateblock"><div class="gi">!</div>'+
+    '<h2>Today’s check-in first</h2>'+
+    '<p>'+esc(miss.map(function(m){return m.replace(/_/g,' ');}).join(', '))+
+    ' still needed. The rest of the app unlocks once today is logged.</p>'+
+    '<button class="btn pri" onclick="go(\'hub\')">Go and log it</button></div>';
+  el.style.display='block';
+}
+
 function go(id){
+  // Hub is never gated — it holds both the session and the form.
+  if(id!=='hub'&&gateActive()){
+    renderGate();
+  }else{
+    var g=$('gate'); if(g)g.style.display='none';
+  }
+
+  var changed=(id!==CURRENT_TAB);
+  CURRENT_TAB=id;
+
   TABS.forEach(function(t){
     var p=$('p-'+t[0]); if(p)p.classList.toggle('on',t[0]===id);
   });
@@ -786,11 +1234,17 @@ function go(id){
   if(id==='running')loadRunning();
   if(id==='diet'){loadDiet();renderDiet();}
   if(id==='training')renderTraining();
-  if(id==='body'){loadBody();renderBody();loadPhotos();}
+  if(id==='body'){loadBody();renderBody();loadPhotos();renderUpload();}
   if(id==='goals')loadGoals();
   if(id==='summary'){loadSummary();renderSummary();}
   window.scrollTo(0,0);
+
+  // The cards rise in sequence — but only when the tab actually changed.
+  // The Hub re-renders on visibilitychange and after every save; replaying the
+  // entrance on each of those would be intolerable.
+  if(changed)playOnce($('p-'+id),'entering',560);
 }
+var CURRENT_TAB=null;
 
 /* ─────────────────────────── stubs ─────────────────────────── */
 /* Honest placeholders. Each names the step that connects it, so an empty tab
@@ -817,6 +1271,9 @@ function renderAll(err){
   renderMacros();
   renderLog();
   renderRail();
+  // Re-evaluate the gate on every refresh, so completing the check-in lifts it
+  // without needing a tab change.
+  renderGate();
 }
 
 function renderHubState(err){
@@ -936,121 +1393,277 @@ function renderSession(){
 }
 
 /* ─────────────────────────── check-in ─────────────────────────── */
-/* Every rating in the schema runs 1 = bad, 5 = good — including soreness,
-   fatigue and stress, where that is the opposite of what most apps do. The
-   end labels below exist so the scale is never ambiguous at 5am. */
+/**
+ * The database stores every rating 1 = bad, 5 = good — including fatigue,
+ * soreness and stress, where that is the opposite of how anyone would say it
+ * out loud. 361 historical rows were imported under that rule, so it cannot
+ * change without rewriting recorded data.
+ *
+ * So the scale is inverted at the boundary instead. Fields flagged `inv` are
+ * shown as 1 = none, 5 = severe — which is what you mean by "fatigue 5" — and
+ * converted to and from the stored form on save and on read. Storage stays
+ * consistent with every historical row; the display reads the way it should.
+ *
+ * Columns: key, label, low label, high label, core?, inverted?
+ */
 var RATINGS=[
-  ['sleep_quality','Sleep quality','Poor','Excellent',1],
-  ['fatigue','Fatigue','Exhausted','Fresh',1],
-  ['soreness','Soreness','Very sore','None',1],
-  ['session_effort','Session effort','Poor','Excellent',0],
-  ['performance','Performance','Poor','Excellent',0],
-  ['strength_feel','Strength feel','Weak','Strong',0],
-  ['stress','Stress','Very high','Calm',0],
-  ['session_enjoyment','Enjoyment','Low','High',0],
-  ['hunger','Hunger','Ravenous','Settled',0],
-  ['cravings','Cravings','Strong','None',0]
+  ['sleep_quality',    'Sleep quality',  'Poor',    'Excellent', 1, 0],
+  ['fatigue',          'Fatigue',        'None',    'Exhausted', 1, 1],
+  ['soreness',         'Soreness',       'None',    'Very sore', 1, 1],
+  ['performance',      'Performance',    'Poor',    'Excellent', 1, 0],
+  ['session_effort',   'Session effort', 'Easy',    'Maximal',   0, 1],
+  ['strength_feel',    'Strength feel',  'Weak',    'Strong',    0, 0],
+  ['stress',           'Stress',         'None',    'Very high', 0, 1],
+  ['session_enjoyment','Enjoyment',      'Low',     'High',      0, 0],
+  ['hunger',           'Hunger',         'Settled', 'Ravenous',  0, 1],
+  ['cravings',         'Cravings',       'None',    'Strong',    0, 1]
 ];
-var R={};              // pending ratings
+function ratingMeta(k){
+  for(var i=0;i<RATINGS.length;i++) if(RATINGS[i][0]===k) return RATINGS[i];
+  return null;
+}
+/* stored (1=bad..5=good)  ->  what to show */
+function toDisplay(k,v){
+  if(v==null)return null;
+  var m=ratingMeta(k);
+  return (m&&m[5])?(6-v):v;
+}
+/* what was tapped  ->  stored */
+function toStored(k,v){
+  if(v==null)return null;
+  var m=ratingMeta(k);
+  return (m&&m[5])?(6-v):v;
+}
+
+/* A check-in counts as done when these are present. Performance only matters
+   on a day with a session — there is nothing to rate on a rest day. */
+function requiredFields(){
+  var req=['hours_slept','sleep_quality','fatigue','soreness'];
+  var p=DATA&&DATA.plan;
+  if(p&&!p.is_rest&&p.session_type!=='race')req.push('performance');
+  return req;
+}
+function missingFields(existing){
+  return requiredFields().filter(function(k){return existing[k]==null;});
+}
+function checkinComplete(existing){
+  return missingFields(existing||{}).length===0;
+}
+
+var R={};              // pending ratings, in DISPLAY units
+var F={};              // pending free inputs, by element id
 var MORE=false;        // extra fields expanded
 var LOGDATE=null;
 
-function setR(k,v){ R[k]=(R[k]===v?null:v); renderLog(); }
-function toggleMore(){ MORE=!MORE; renderLog(); }
+/* renderLog() rebuilds the form from `existing`, so anything typed but not yet
+   saved is destroyed on every re-render. Ratings survived because they live in
+   R; the number and text inputs did not. Capture them before any re-render. */
+var FREE_IDS=['lg-wt','lg-sleep','lg-cardio','lg-notes'];
+function captureFields(){
+  FREE_IDS.forEach(function(id){ var el=$(id); if(el) F[id]=el.value; });
+}
+/* Pending value wins over saved; '' means genuinely empty. */
+function fieldVal(id, saved){
+  if(F[id]!=null) return F[id];
+  return (saved==null) ? '' : String(saved);
+}
 
-function ratingBlock(k,label,lo,hi){
-  var cur=R[k];
+function setR(k,v){ captureFields(); R[k]=(R[k]===v?null:v); renderLog(); }
+function toggleMore(){ captureFields(); MORE=!MORE; renderLog(); }
+
+function ratingBlock(k,label,lo,hi,storedVal,required){
+  // R holds display units; the stored value is converted for the initial state.
+  var cur = (R[k]!=null) ? R[k] : toDisplay(k,storedVal);
   var btns='';
   for(var i=1;i<=5;i++){
     btns+='<button class="'+(cur===i?'on':'')+'" onclick="setR(\''+k+'\','+i+')">'+i+'</button>';
   }
-  return '<div class="rblock"><div class="rlab"><span class="rn">'+esc(label)+'</span>'+
+  var unset = cur==null;
+  return '<div class="rblock'+(required&&unset?' needed':'')+'">'+
+         '<div class="rlab"><span class="rn">'+esc(label)+
+           (required&&unset?'<span class="pill red">needed</span>':'')+'</span>'+
          '<span class="rv'+(cur?' set':'')+'">'+(cur?cur+' of 5':'not set')+'</span></div>'+
          '<div class="rate">'+btns+'</div>'+
          '<div class="hint"><span>1 · '+esc(lo)+'</span><span>'+esc(hi)+' · 5</span></div></div>';
 }
 
-var LOG_OPEN=false;   // set true by "Amend", or when nothing is logged yet
-function amendLog(){LOG_OPEN=true;renderLog();}
-function collapseLog(){LOG_OPEN=false;R={};renderLog();}
+/* ── the gate ──
+   Before the cutoff an incomplete check-in is a warning. After it, the other
+   tabs are withheld until it is done. Race days are exempt: the cutoff is
+   09:00 at weekends and the race is a Saturday, so a block screen would land
+   somewhere around kilometre 25. */
+function gateCutoffHour(){
+  var d=new Date().getDay();          // 0 Sun, 6 Sat
+  return (d===0||d===6)?9:6.5;
+}
+function pastGate(){
+  var now=new Date();
+  return (now.getHours()+now.getMinutes()/60) >= gateCutoffHour();
+}
+function isRaceDay(){
+  return !!(DATA&&DATA.plan&&DATA.plan.session_type==='race');
+}
+function gateActive(){
+  if(!DATA)return false;
+  if(isRaceDay())return false;
+  return pastGate() && !checkinComplete(DATA.actual||{});
+}
+function gateNote(){
+  var h=gateCutoffHour();
+  var t=(h===9)?'09:00':'06:30';
+  return pastGate()
+    ? ' The rest of the app is locked until this is done.'
+    : ' The rest of the app locks at '+t+' if it is still incomplete.';
+}
 
-/* Which check-in fields already hold something for this day. */
-function loggedFields(existing){
-  var out=[];
-  [['hours_slept','sleep'],['sleep_quality','sleep quality'],['fatigue','fatigue'],
-   ['soreness','soreness'],['stress','stress'],['session_effort','session effort'],
-   ['performance','performance'],['strength_feel','strength feel']].forEach(function(p){
-    if(existing[p[0]]!=null)out.push(p[1]);
-  });
-  return out;
+var LOG_OPEN=false;   // forced open by "Amend"
+var LOG_DATE_OVERRIDE=null;   // amending an earlier day
+
+function amendLog(){LOG_OPEN=true;R={};renderLog();}
+function collapseLog(){LOG_OPEN=false;LOG_DATE_OVERRIDE=null;R={};renderLog();}
+function setLogDate(d){
+  LOG_DATE_OVERRIDE=d;R={};LOG_OPEN=true;
+  // Amending a past day needs that day's stored values, which /api/today
+  // returns for any date.
+  api('/api/today?date='+d).then(function(j){AMEND=j;renderLog();})
+    .catch(function(){AMEND=null;renderLog();});
+}
+var AMEND=null;   // payload for the day being amended
+
+function logSource(){
+  if(LOG_DATE_OVERRIDE&&AMEND)return {date:AMEND.date,actual:AMEND.actual||{},plan:AMEND.plan};
+  return {date:DATA.date,actual:DATA.actual||{},plan:DATA.plan};
 }
 
 function renderLog(){
   var el=$('hublog');
   if(!DATA){el.innerHTML='<div class="note">Connect to log.</div>';return;}
-  LOGDATE=DATA.date;
 
-  var existing=(DATA.actual)||{};
-  var done=loggedFields(existing);
+  var src=logSource();
+  LOGDATE=src.date;
+  var existing=src.actual;
+  var missing=missingFields(existing);
+  var complete=missing.length===0;
+  var amending=!!LOG_DATE_OVERRIDE;
   var queued=outboxGet().length;
 
-  // Already logged and not being amended — show a summary, not a form. There
-  // is no reason to look at ten empty rating rows at 5am on a day you have
-  // already filled in.
-  if(done.length&&!LOG_OPEN){
+  // Only collapse when the check-in is actually COMPLETE. A half-filled day
+  // stays open — collapsing it would hide the thing that still needs doing.
+  if(complete&&!LOG_OPEN&&!amending){
     var bits=[];
     if(existing.hours_slept!=null)bits.push(existing.hours_slept+' h sleep');
-    if(existing.sleep_quality!=null)bits.push('sleep '+existing.sleep_quality+'/5');
-    if(existing.fatigue!=null)bits.push('fatigue '+existing.fatigue+'/5');
-    if(existing.soreness!=null)bits.push('soreness '+existing.soreness+'/5');
-    if(existing.performance!=null)bits.push('performance '+existing.performance+'/5');
+    RATINGS.forEach(function(r){
+      if(r[4]&&existing[r[0]]!=null)bits.push(r[1].toLowerCase()+' '+toDisplay(r[0],existing[r[0]])+'/5');
+    });
     if(existing.weight_kg!=null)bits.push(n1(existing.weight_kg)+' kg');
 
     el.innerHTML=
-      '<div class="ch"><span class="ct">Logged'+
-      '<span class="pill green">'+done.length+' field'+(done.length===1?'':'s')+'</span></span>'+
+      '<div class="ch"><span class="ct">Logged<span class="pill green">complete</span></span>'+
       '<span class="cm num">'+esc(LOGDATE)+(queued?' · '+queued+' queued':'')+'</span></div>'+
       '<div style="font-size:14px;color:var(--t2);line-height:1.7">'+esc(bits.join(' · '))+'</div>'+
       (existing.notes?'<div class="note">'+esc(existing.notes)+'</div>':'')+
-      '<button class="btn f" style="margin-top:11px" onclick="amendLog()">Amend</button>';
+      '<div style="display:flex;gap:8px;margin-top:11px">'+
+        '<button class="btn f" onclick="amendLog()">Amend today</button>'+
+        '<button class="btn" onclick="openAmendPicker()">Earlier day</button>'+
+      '</div>';
     return;
   }
 
-  var h='<div class="ch"><span class="ct">'+(done.length?'Amending':'Check-in')+'</span>'+
-        '<span class="cm num" id="logstate"></span></div>';
+  var h='<div class="ch"><span class="ct">'+
+        (amending?'Amending '+esc(LOGDATE):(complete?'Amending':'Check-in'))+
+        (!complete&&!amending?'<span class="pill red">'+missing.length+' to go</span>':'')+
+        '</span><span class="cm num" id="logstate"></span></div>';
 
+  /* Which day is this? A back-dated entry is otherwise indistinguishable
+     from today's, which makes it easy to fill the wrong one. */
+  if(LOGDATE){
+    var _td=new Date().toLocaleDateString('en-CA',{timeZone:'Australia/Sydney'});
+    var _dd=new Date(LOGDATE+'T12:00:00');
+    var _lbl=_dd.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
+    var _diff=Math.round((new Date(_td+'T12:00:00')-_dd)/86400000);
+    var _pre=(LOGDATE===_td)?'Today — ':
+             (_diff===1?'Yesterday — ':(_diff>1?(_diff+' days ago — '):'Future — '));
+    h+='<div class="'+(LOGDATE===_td?'info':'warn')+'" style="margin-bottom:8px">'+
+       '<strong>'+_pre+_lbl+'</strong></div>';
+  }
+
+  if(!complete&&!amending){
+    h+='<div class="warn">Not logged yet — '+esc(missing.map(function(m){
+      return m.replace(/_/g,' ');
+    }).join(', '))+' still needed.'+gateNote()+'</div>';
+  }
+
+  // Prefill with value=, not placeholder=. A saved number shown as a grey
+  // placeholder in an empty box reads as "nothing saved", which is exactly
+  // the wrong signal.
+  var _wt=fieldVal('lg-wt', existing.weight_kg!=null?(Math.round(existing.weight_kg*10)/10):null);
   h+='<div class="fieldrow"><label for="lg-wt">Weight kg</label>'+
-     '<input type="number" id="lg-wt" inputmode="decimal" step="0.1" min="40" max="200" placeholder="'+
-     (existing.weight_kg!=null?(Math.round(existing.weight_kg*10)/10):'—')+'"></div>';
+     '<input type="number" id="lg-wt" inputmode="decimal" step="0.1" min="40" max="200"'+
+     (_wt!==''?(' value="'+_wt+'"'):' placeholder="—"')+
+     '></div>';
 
-  h+='<div class="fieldrow"><label for="lg-sleep">Hours slept</label>'+
-     '<input type="number" id="lg-sleep" inputmode="decimal" step="0.25" min="0" max="16" placeholder="'+
-     (existing.hours_slept!=null?existing.hours_slept:'—')+'"></div>';
+  var _sl=fieldVal('lg-sleep', existing.hours_slept);
+  h+='<div class="fieldrow'+(_sl===''?' needed':'')+'">'+
+     '<label for="lg-sleep">Hours slept'+
+     (_sl===''?'<span class="pill red">needed</span>':'')+'</label>'+
+     '<input type="number" id="lg-sleep" inputmode="decimal" step="0.25" min="0" max="16"'+
+     (_sl!==''?(' value="'+_sl+'"'):' placeholder="—"')+
+     '></div>';
 
+  var req=requiredFields();
   RATINGS.forEach(function(r){
     if(!r[4]&&!MORE)return;
-    h+=ratingBlock(r[0],r[1],r[2],r[3]);
+    h+=ratingBlock(r[0],r[1],r[2],r[3],existing[r[0]],req.indexOf(r[0])>=0);
   });
 
   if(MORE){
+    var _cn=fieldVal('lg-cardio', existing.cardio_note);
     h+='<div class="rblock"><div class="rlab"><span class="rn">Session or fuelling notes</span></div>'+
-       '<input type="text" id="lg-cardio" placeholder="e.g. 65 g/h held, no GI issues at 90 min"></div>';
+       '<input type="text" id="lg-cardio" placeholder="e.g. 65 g/h held, no GI issues at 90 min"'+
+       (_cn!==''?(' value="'+esc(_cn)+'"'):'')+'></div>';
+    var _nt=fieldVal('lg-notes', existing.notes);
     h+='<div class="rblock"><div class="rlab"><span class="rn">Notes</span></div>'+
-       '<input type="text" id="lg-notes" placeholder="anything else"></div>';
+       '<input type="text" id="lg-notes" placeholder="anything else"'+
+       (_nt!==''?(' value="'+esc(_nt)+'"'):'')+'></div>';
   }
 
   h+='<button class="morebtn" onclick="toggleMore()">'+(MORE?'Fewer fields':'More fields')+'</button>';
   h+='<div style="display:flex;gap:8px;margin-top:9px">'+
      '<button class="btn pri f" onclick="saveLog()">Save</button>'+
-     (done.length?'<button class="btn" onclick="collapseLog()">Cancel</button>':'')+
+     ((complete||amending)?'<button class="btn" onclick="collapseLog()">Done</button>':'')+
      '</div>';
   h+='<div id="logmsg"></div>';
-
-  if(done.length)h+='<div class="note">Already recorded: '+esc(done.join(', '))+
-    '. Leaving a field blank keeps what is there — it does not clear it.</div>';
+  h+='<div class="note">Leaving a field blank keeps what is already there — it does not clear it.'+
+     (amending?'':' <button class="btn sm" onclick="openAmendPicker()">Amend an earlier day</button>')+'</div>';
 
   el.innerHTML=h;
   renderOutboxState();
+}
+
+/* Amend any past day. The API accepts any date and rejects the future, so the
+   only thing needed here is a way to choose one. */
+function openAmendPicker(){
+  var today=isoOf(new Date());
+  var opts='';
+  for(var i=0;i<28;i++){
+    var d=new Date(); d.setDate(d.getDate()-i);
+    var k=isoOf(d);
+    opts+='<option value="'+k+'"'+(k===LOGDATE?' selected':'')+'>'+esc(fmtDateFull(k))+'</option>';
+  }
+  openModal(
+    '<div class="mh"><div><div class="mt" id="modaltitle">Amend a day</div>'+
+    '<div class="msub">Pick any of the last 28 days</div></div>'+
+    '<div class="mnav"><button onclick="closeModal()" aria-label="Close">✕</button></div></div>'+
+    '<select id="amend-date" style="margin-bottom:12px">'+opts+'</select>'+
+    '<button class="btn pri f" style="width:100%" onclick="confirmAmend()">Open that day</button>'+
+    '<div class="note">Whatever is already recorded for that day loads into the form. '+
+    'Blank fields are left alone rather than cleared.</div>');
+}
+function confirmAmend(){
+  var d=$('amend-date').value;
+  closeModal();
+  setLogDate(d);
+  go('hub');
 }
 
 /* Offline outbox. A save at 5am on bad reception queues rather than failing,
@@ -1100,12 +1713,14 @@ function saveLog(){
   var msg=$('logmsg');
   var payload={local_date:LOGDATE,ratings:{}};
 
-  var wt=$('lg-wt')?$('lg-wt').value.trim():'';
+  captureFields();
+  var wt=(F['lg-wt']||'').trim();
   if(wt!=='')payload.weight_kg=parseFloat(wt);
-  var sl=$('lg-sleep')?$('lg-sleep').value.trim():'';
+  var sl=(F['lg-sleep']||'').trim();
   if(sl!=='')payload.ratings.hours_slept=parseFloat(sl);
 
-  RATINGS.forEach(function(r){ if(R[r[0]])payload.ratings[r[0]]=R[r[0]]; });
+  // R is in display units; convert back to the stored 1 = bad convention.
+  RATINGS.forEach(function(r){ if(R[r[0]])payload.ratings[r[0]]=toStored(r[0],R[r[0]]); });
 
   if($('lg-cardio')&&$('lg-cardio').value.trim())payload.cardio_note=$('lg-cardio').value.trim();
   if($('lg-notes')&&$('lg-notes').value.trim())payload.notes=$('lg-notes').value.trim();
@@ -1118,10 +1733,14 @@ function saveLog(){
   }
 
   msg.innerHTML='<div class="info">Saving…</div>';
+  var AMEND_WAS=!!AMEND;
   postLog(payload).then(function(j){
-    R={}; LOG_OPEN=false;
+    R={}; F={}; LOG_OPEN=false; LOG_DATE_OVERRIDE=null; AMEND=null;
     var extra=j.weight_note?('<div class="info" style="margin-top:8px">'+esc(j.weight_note)+'</div>'):'';
     msg.innerHTML='<div class="ok">Saved.</div>'+extra;
+    // refresh() rebuilds the Hub and takes the inline message with it, so the
+    // confirmation lives outside the tab where it cannot be repainted away.
+    toast(AMEND_WAS?'Day amended':'Check-in saved');
     refresh();
   }).catch(function(e){
     if(e.status===400){
@@ -1133,6 +1752,7 @@ function saveLog(){
     var q=outboxGet();q.push(payload);outboxPut(q);renderOutboxState();
     msg.innerHTML='<div class="warn">No connection — saved to this device and queued. '+
       'It will send next time the app reaches the API.</div>';
+    toast('Queued — no connection','warn');
   });
 }
 
@@ -1236,10 +1856,12 @@ function barChart(items,opt){
   var vals=items.map(function(i){
     return '<div class="cv">'+(i.value?i.value.toFixed(dp):'')+'</div>';
   }).join('');
-  var bars=items.map(function(i){
+  // Bars grow from the baseline left to right. The eye follows the sweep and
+  // the shape of the series registers before any single number does.
+  var bars=items.map(function(i,ix){
     var pct=i.value?Math.max(3,(i.value/max)*100):0;
     return '<div class="cb'+(i.now?' now':'')+'" title="'+esc(i.title||'')+'">'+
-           '<i style="height:'+pct.toFixed(1)+'%"></i></div>';
+           '<i style="height:'+pct.toFixed(1)+'%;animation-delay:'+(ix*28)+'ms"></i></div>';
   }).join('');
   var labs=items.map(function(i){
     return '<div class="cl'+(i.now?' now':'')+'">'+esc(i.label)+'</div>';
@@ -1249,14 +1871,64 @@ function barChart(items,opt){
 }
 
 /* ─────────────────────────── modal ─────────────────────────── */
+/* Whether motion should run at all. Everything below checks this rather than
+   relying on the CSS media query alone, because some of it is timing in JS. */
+function motionOK(){
+  return !(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/* Add a class, let its animation play, take it off again. Without the removal
+   the animation cannot be replayed, and the class lingers in the DOM. */
+function playOnce(el,cls,ms){
+  if(!el)return;
+  el.classList.remove(cls);
+  if(!motionOK())return;
+  void el.offsetWidth;            // forces a reflow so the animation restarts
+  el.classList.add(cls);
+  setTimeout(function(){ el.classList.remove(cls); }, ms);
+}
+
+/* The exit animation means hiding happens on a timer. If something reopens the
+   modal before that timer fires, the pending callback would strip .open off the
+   modal that is now legitimately showing — a dialog that closes itself 130ms
+   after opening. Cancelling the timer on open removes the race entirely. */
+var MODAL_CLOSE_T=null;
 function openModal(html){
+  clearTimeout(MODAL_CLOSE_T);
   $('modalcard').innerHTML=html;
-  $('modal').classList.add('open');
+  var m=$('modal');
+  m.classList.remove('closing');
+  m.classList.add('open');
   document.body.classList.add('locked');
 }
 function closeModal(){
-  $('modal').classList.remove('open');
-  document.body.classList.remove('locked');
+  var m=$('modal');
+  // Already open? Already closing? Either way there is nothing to do — without
+  // the second check a tap during the exit would start a second one.
+  if(!m.classList.contains('open')||m.classList.contains('closing'))return;
+  if(!motionOK()){
+    m.classList.remove('open'); document.body.classList.remove('locked'); return;
+  }
+  // Let the exit actually be seen before the element goes.
+  m.classList.add('closing');
+  MODAL_CLOSE_T=setTimeout(function(){
+    m.classList.remove('open','closing');
+    document.body.classList.remove('locked');
+  },130);
+}
+
+/* Brief confirmation. Used where something was saved and the result is not
+   otherwise visible on screen. */
+var TOAST_T=null;
+function toast(msg,tone){
+  var el=$('toast'); if(!el)return;
+  clearTimeout(TOAST_T);
+  el.className=(tone==='warn'?'warn ':'')+'on';
+  el.innerHTML='<span class="tdot"></span>'+esc(msg);
+  TOAST_T=setTimeout(function(){
+    el.classList.add('off');
+    setTimeout(function(){ el.className=''; }, motionOK()?190:0);
+  }, 2200);
 }
 
 /* ─────────────────────────── calendar ─────────────────────────── */
@@ -1338,14 +2010,17 @@ function renderCal(){
       if(lv>0){
         var op=(0.07+lv*0.26).toFixed(3);
         var col=(a.run_km&&a.strength_sessions)
-          ? 'linear-gradient(135deg,rgba(155,123,255,'+op+'),rgba(77,159,255,'+op+'))'
+          ? 'linear-gradient(135deg,rgba(var(--heat-lift),'+op+'),rgba(var(--heat-run),'+op+'))'
           : a.run_km
-            ? 'rgba(77,159,255,'+op+')'
-            : 'rgba(155,123,255,'+op+')';
+            ? 'rgba(var(--heat-run),'+op+')'
+            : 'rgba(var(--heat-lift),'+op+')';
         heat='<span class="cheat" style="background:'+col+'"></span>';
       }
     }
+    // Cells arrive in reading order. 9ms apart means the whole month lands in
+    // under 300ms — a sweep across the grid rather than a queue.
     h+='<button class="cd tap'+(k===today?' today':'')+(future?' future':'')+cls+'" '+
+       'style="animation-delay:'+(day*9)+'ms" '+
        'onclick="dayModal(\''+k+'\')" aria-label="'+k+'">'+heat+
        '<span class="cnum">'+day+'</span><span class="cdots">'+dots+'</span></button>';
   }
@@ -1584,7 +2259,10 @@ function renderTraining(){
   }
 
   // Day strip — today marked, past days dimmed.
-  pick.innerHTML='<div id="rail" style="padding:2px 0 12px">'+PLAN.map(function(s){
+  // Its own id, not "rail". The header week strip already owns that one, and
+  // two elements sharing an id means getElementById silently returns whichever
+  // comes first in the document — it worked only by accident of ordering.
+  pick.innerHTML='<div class="railstrip" style="padding:2px 0 12px">'+PLAN.map(function(s){
     var d=new Date(s.local_date+'T12:00:00');
     var isToday=s.local_date===today, sel=s.local_date===TDAY, past=s.local_date<today;
     return '<button class="rd'+(sel?' today':'')+(past?' past':'')+'" onclick="setTDay(\''+s.local_date+'\')" '+
@@ -1598,7 +2276,7 @@ function renderTraining(){
   var s=PLAN.filter(function(x){return x.local_date===TDAY;})[0];
   var isToday=s.local_date===today;
 
-  var h='<div class="card"'+(isToday?' style="border-color:rgba(250,17,79,.45)"':'')+'>'+
+  var h='<div class="card"'+(isToday?' style="border-color:var(--accent)"':'')+'>'+
     '<div class="ch"><span class="ct">'+esc(s.day_label)+
     (isToday?'<span class="pill red">today</span>':'')+'</span>'+
     '<span class="cm num">'+esc(fmtDate(s.local_date))+'</span></div>';
@@ -1675,40 +2353,92 @@ function renderTraining(){
 }
 
 /* ─────────────────────────── body ─────────────────────────── */
-var BODYDAYS=null, BODY_LOADED=false;
+var BODYDAYS=null, PHOTODAYS=null, BODY_LOADED=false, WPERIOD=180;
+
+function setWPeriod(d){
+  WPERIOD=d;
+  document.querySelectorAll('#wseg button').forEach(function(b){
+    b.classList.toggle('on', +b.dataset.d===d);
+  });
+  renderBody();
+}
 
 function loadBody(){
   if(BODY_LOADED||!CFG.url||!CFG.key)return;
   BODY_LOADED=true;
-  api('/api/days?from='+isoOf(new Date(Date.now()-180*86400000))).then(function(j){
-    BODYDAYS=j.days||[]; renderBody();
+  // Photos reach back to February 2025, so the measurements beside them need
+  // the full span — not the window the chart happens to be showing.
+  api('/api/days?from=2025-01-01').then(function(j){
+    PHOTODAYS=j.days||[];
+    BODYDAYS=PHOTODAYS;
+    renderBody();
+    renderPhotos();
   }).catch(function(){ BODY_LOADED=false; $('bodychart').innerHTML='<div class="warn">Could not load.</div>'; });
 }
 
-/* Minimal SVG line chart. Gaps are breaks in the line, never interpolated —
-   a missing weigh-in is not a weight. */
-function sparkline(points,goal){
-  if(!points.length)return '<div class="note">No readings.</div>';
-  var W=320,H=110,pad=6;
-  var vals=points.map(function(p){return p.v;});
-  var lo=Math.min.apply(null,vals.concat(goal?[goal]:[]));
-  var hi=Math.max.apply(null,vals.concat(goal?[goal]:[]));
-  if(hi-lo<1){hi+=0.5;lo-=0.5;}
-  var x=function(i){return pad+(i/(points.length-1||1))*(W-pad*2);};
-  var y=function(v){return pad+(1-(v-lo)/(hi-lo))*(H-pad*2);};
+/**
+ * Weight over time. Daily readings as faint dots, a 7-day rolling average as
+ * the line, and the goal as a dashed rule.
+ *
+ * The average is the line because a single scale reading swings more than a
+ * fortnight of progress — your own data moves 1.2 kg day to day. Gaps are
+ * breaks, never bridged: a missing weigh-in is not a weight.
+ */
+function weightChart(points,goal){
+  var real=points.filter(function(p){return p.v!=null;});
+  if(real.length<2)return '<div class="note">Not enough readings in this period.</div>';
+
+  var W=340,H=150,padL=30,padR=8,padT=10,padB=18;
+
+  // 7-day rolling average, over readings that exist.
+  var avg=points.map(function(p,i){
+    var win=points.slice(Math.max(0,i-6),i+1).filter(function(q){return q.v!=null;});
+    return win.length>=2 ? win.reduce(function(a,q){return a+q.v;},0)/win.length : null;
+  });
+
+  var all=real.map(function(p){return p.v;}).concat(goal?[goal]:[]);
+  var lo=Math.min.apply(null,all), hi=Math.max.apply(null,all);
+  var pad=(hi-lo)*0.12||0.5; lo-=pad; hi+=pad;
+
+  var x=function(i){return padL+(i/(points.length-1||1))*(W-padL-padR);};
+  var y=function(v){return padT+(1-(v-lo)/(hi-lo))*(H-padT-padB);};
+
+  var grid='',labels='';
+  [0,0.5,1].forEach(function(f){
+    var v=lo+(hi-lo)*f, yy=y(v);
+    grid+='<line class="gridline" x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'"/>';
+    labels+='<text class="axlab" x="2" y="'+(yy+3).toFixed(1)+'">'+v.toFixed(1)+'</text>';
+  });
+
+  var dots=real.map(function(p){
+    var i=points.indexOf(p);
+    return '<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="1.4" fill="var(--t3)"/>';
+  }).join('');
 
   var d='',open=false;
-  points.forEach(function(p,i){
-    if(p.v==null){open=false;return;}
-    d+=(open?'L':'M')+x(i).toFixed(1)+' '+y(p.v).toFixed(1)+' ';
+  avg.forEach(function(v,i){
+    if(v==null){open=false;return;}
+    d+=(open?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';
     open=true;
   });
-  var goalLine=goal?('<line x1="'+pad+'" y1="'+y(goal).toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y(goal).toFixed(1)+
-    '" stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3"/>'):'';
-  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:110px">'+
-    goalLine+'<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="1.6" '+
-    'stroke-linejoin="round" stroke-linecap="round"/></svg>'+
-    '<div class="tlx"><span class="num">'+lo.toFixed(1)+'</span><span class="num">'+hi.toFixed(1)+'</span></div>';
+
+  var goalLine=goal?('<line x1="'+padL+'" y1="'+y(goal).toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y(goal).toFixed(1)+
+    '" stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3"/>'+
+    '<text class="axlab" x="'+(W-padR)+'" y="'+(y(goal)-4).toFixed(1)+'" text-anchor="end" fill="var(--green)">goal '+goal+'</text>'):'';
+
+  var first=points[0]&&points[0].d, last=points[points.length-1]&&points[points.length-1].d;
+
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" style="height:150px">'+
+    grid+labels+goalLine+dots+
+    '<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>'+
+    '</svg>'+
+    '<div class="tlx"><span>'+esc(first?fmtDateFull(first):'')+'</span>'+
+    '<span>'+esc(last?fmtDateFull(last):'')+'</span></div>'+
+    '<div style="display:flex;gap:14px;font-size:11px;color:var(--t2);margin-top:8px;flex-wrap:wrap">'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:var(--t3)"></span>daily reading</span>'+
+      '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:2px;background:var(--accent)"></span>7-day average</span>'+
+      (goal?'<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;border-top:1px dashed var(--green)"></span>goal</span>':'')+
+    '</div>';
 }
 
 function renderBody(){
@@ -1725,13 +2455,25 @@ function renderBody(){
     widget('Weight, 7-day', n1(avg7),' kg', recent.length+' of 7 days measured')+
     widget('To goal', avg7!=null?n1(avg7-76):null,' kg','target 76.0')+
     widget('Body fat', bf?n1(bf.rolling_avg):null,' %', bf?(bf.readings+' readings · '+bf.confidence):'no reading')+
-    widget('Lean mass', lm?n1(lm.rolling_avg):null,' kg', lm?(lm.device):'no reading');
+    widget('Lean mass', lm?n1(lm.rolling_avg):null,' kg',
+           lm?(lm.device+(lm.device!==refDevice()?' · not converted':'')):'no reading');
 
-  // Chart: oldest first, gaps preserved.
-  var series=BODYDAYS.slice().reverse().map(function(d){return {d:d.local_date,v:d.weight_kg};});
-  $('bodychart').innerHTML=sparkline(series,76)+
-    '<div class="note">180 days. Breaks in the line are days with no reading — never interpolated. '+
-    'The dashed line is the 76 kg goal.</div>';
+  // Chart: oldest first, gaps preserved, windowed to the selected period.
+  var cutoff=isoOf(new Date(Date.now()-WPERIOD*86400000));
+  var series=BODYDAYS.filter(function(d){return WPERIOD>=3650||d.local_date>=cutoff;})
+                     .slice().reverse()
+                     .map(function(d){return {d:d.local_date,v:d.weight_kg};});
+  var measured=series.filter(function(p){return p.v!=null;}).length;
+
+  var seg='<div class="seg" id="wseg">'+
+    [[30,'1M'],[90,'3M'],[180,'6M'],[365,'1Y'],[3650,'All']].map(function(p){
+      return '<button data-d="'+p[0]+'" class="'+(WPERIOD===p[0]?'on':'')+'" onclick="setWPeriod('+p[0]+')">'+p[1]+'</button>';
+    }).join('')+'</div>';
+
+  $('bodychart').innerHTML=seg+weightChart(series,76)+
+    '<div class="note">'+measured+' readings across '+series.length+' days'+
+    (series.length>measured?(' — '+(series.length-measured)+' days with no weigh-in, shown as breaks rather than joined across'):'')+
+    '. The line is a 7-day average because a single reading swings more than a fortnight of progress.</div>';
 
   $('bodycomp').innerHTML=
     (bf?('<div class="mrow"><div class="mh"><span>Body fat</span><b class="num">'+n1(bf.rolling_avg)+'%</b></div></div>'):'')+
@@ -1739,9 +2481,12 @@ function renderBody(){
     '<div class="warn" style="margin-top:9px"><b>14-day rolling averages, one device only.</b> '+
     'Withings and Zepp Life disagreed by about 9 percentage points measuring the same body, '+
     'so these are never plotted across the device boundary. Individual readings swing about '+
-    '1.4 kg of lean mass day to day — only the average carries information.</div>';
+    '1.4 kg of lean mass day to day — only the average carries information.</div>'+
+    '<div id="bodycapture"></div>';
 
-  // Capture rate: how often the scale actually recorded, by month.
+  // Scale capture. A diagnostic, not a metric — it belongs as one line at the
+  // bottom of the composition card, not as a chart of its own. It only earns
+  // more attention than that when the number is poor.
   var byMonth={};
   BODYDAYS.forEach(function(d){
     var m=d.local_date.slice(0,7);
@@ -1749,15 +2494,115 @@ function renderBody(){
     byMonth[m].days++;
     if(d.weight_kg!=null)byMonth[m].weighed++;
   });
-  var months=Object.keys(byMonth).sort().reverse().slice(0,6);
-  $('bodycapture').innerHTML=months.map(function(m){
-    var r=byMonth[m], pct=Math.round(100*r.weighed/r.days);
-    return '<div class="mrow"><div class="mh"><span>'+esc(m)+'</span><b>'+r.weighed+' of '+r.days+' days · '+pct+'%</b></div>'+
-      '<div class="bar"><i style="width:'+pct+'%;background:'+(pct<70?'var(--amber)':'var(--green)')+'"></i></div></div>';
-  }).join('')+
-  '<div class="note">A low month is a scale that did not record, not a body that did not exist. '+
-  'Capture dropped sharply from July — impedance draws far more current than the load cell, so a '+
-  'failing battery shows up here first. The batteries have not been changed.</div>';
+  var months=Object.keys(byMonth).sort().slice(-5);
+  var latest=months.length?byMonth[months[months.length-1]]:null;
+  var pctNow=latest?Math.round(100*latest.weighed/latest.days):null;
+
+  var strip=months.map(function(m){
+    var r=byMonth[m], p=Math.round(100*r.weighed/r.days);
+    var tone=p>=80?'var(--t2)':p>=60?'var(--amber)':'var(--accent)';
+    return '<span style="color:'+tone+'">'+esc(MON3[+m.slice(5,7)-1])+' '+p+'</span>';
+  }).join('<span style="color:var(--t3)"> · </span>');
+
+  $('bodycapture').innerHTML=
+    '<div class="capline"><span class="capl">Scale capture</span>'+
+    '<span class="capv num">'+strip+'</span></div>'+
+    (pctNow!=null&&pctNow<70
+      ? '<div class="note" style="margin-top:6px">Low capture is a scale that did not record, not a day that did not happen. Impedance draws far more current than the load cell, so a failing battery shows here first — the Withings batteries have still not been changed.</div>'
+      : '');
+}
+
+/* ─────────────────────────── photo upload ─────────────────────────── */
+var UP={date:null, files:{}, busy:false};
+
+function renderUpload(){
+  var el=$('photoupload'); if(!el)return;
+  if(!CFG.url||!CFG.key){el.innerHTML='<div class="note">Connect to upload.</div>';return;}
+  if(!UP.date)UP.date=isoOf(new Date());
+  var views=(PHOTOS&&PHOTOS.views&&PHOTOS.views.length)?PHOTOS.views:['front','side','back'];
+
+  el.innerHTML=
+    '<label class="fl" for="up-date">Date these were taken</label>'+
+    '<input type="date" id="up-date" value="'+esc(UP.date)+'" max="'+isoOf(new Date())+'" '+
+      'onchange="UP.date=this.value;renderUpload()" style="margin-bottom:12px">'+
+    '<div class="slots">'+views.map(function(v){
+      var f=UP.files[v];
+      return '<label class="slot'+(f?' filled':'')+'">'+
+        (f?'<img src="'+f.preview+'" alt="">':'')+
+        '<span class="stick">✓</span>'+
+        (f?'':'<span style="font-size:20px">+</span>')+
+        '<span class="slabel">'+esc(v)+'</span>'+
+        '<input type="file" accept="image/*" onchange="pickPhoto(\''+esc(v)+'\',this)">'+
+      '</label>';
+    }).join('')+'</div>'+
+    '<button class="btn pri f" onclick="uploadPhotos()"'+(UP.busy?' disabled':'')+'>'+
+      (UP.busy?'Uploading…':'Upload')+'</button>'+
+    '<div id="upmsg"></div>'+
+    '<div class="note">Named automatically as '+esc(UP.date)+'-view.jpg and filed straight to storage — '+
+    'nothing to save to a folder first. Images are scaled to 2000px on the long edge before sending, '+
+    'which keeps the detail and makes the upload quick on mobile data. '+
+    'Re-uploading a date and view replaces it rather than creating a second copy.</div>';
+}
+
+function pickPhoto(view,input){
+  var f=input.files&&input.files[0];
+  if(!f)return;
+  UP.files[view]={file:f, preview:URL.createObjectURL(f)};
+  renderUpload();
+}
+
+/* Scale down before sending. A phone photo is 3-5 MB; 2000px on the long edge
+   at high quality is a few hundred KB and loses nothing you can see at the
+   size these are ever viewed. */
+function resizeImage(file,maxEdge){
+  return new Promise(function(resolve,reject){
+    var img=new Image();
+    img.onload=function(){
+      var w=img.width,h=img.height;
+      var scale=Math.min(1, maxEdge/Math.max(w,h));
+      if(scale===1&&file.size<1.5*1024*1024){resolve(file);return;}
+      var c=document.createElement('canvas');
+      c.width=Math.round(w*scale); c.height=Math.round(h*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      c.toBlob(function(b){ resolve(b||file); },'image/jpeg',0.92);
+    };
+    img.onerror=function(){ resolve(file); };   // send the original rather than fail
+    img.src=URL.createObjectURL(file);
+  });
+}
+
+function uploadPhotos(){
+  var views=Object.keys(UP.files);
+  var msg=$('upmsg');
+  if(!views.length){msg.innerHTML='<div class="warn">Choose at least one photo.</div>';return;}
+  UP.busy=true; renderUpload();
+  $('upmsg').innerHTML='<div class="info">Uploading '+views.length+'…</div>';
+
+  var done=0, failed=[];
+  views.reduce(function(p,v){
+    return p.then(function(){
+      return resizeImage(UP.files[v].file,2000).then(function(blob){
+        return fetch(CFG.url+'/api/photo?date='+encodeURIComponent(UP.date)+'&view='+encodeURIComponent(v),{
+          method:'POST',
+          headers:{'Authorization':'Bearer '+CFG.key,'Content-Type':'image/jpeg'},
+          body:blob
+        }).then(function(r){
+          if(!r.ok)throw new Error('http '+r.status);
+          done++;
+        });
+      }).catch(function(){ failed.push(v); });
+    });
+  },Promise.resolve()).then(function(){
+    UP.busy=false;
+    Object.keys(UP.files).forEach(function(v){URL.revokeObjectURL(UP.files[v].preview);});
+    UP.files={};
+    PHOTOS_LOADED=false; PHOTOS=null;
+    renderUpload();
+    $('upmsg').innerHTML = failed.length
+      ? '<div class="warn">'+done+' uploaded, '+failed.length+' failed ('+esc(failed.join(', '))+'). Try again — a repeat replaces rather than duplicates.</div>'
+      : '<div class="ok">'+done+' photo'+(done===1?'':'s')+' uploaded and filed under '+esc(UP.date)+'.</div>';
+    loadPhotos();
+  });
 }
 
 /* ─────────────────────────── photos ─────────────────────────── */
@@ -1802,8 +2647,8 @@ function keyFor(date,view){
 function showPhoto(slot,key){
   var el=$('ph-'+slot);
   if(!el)return;
-  if(!key){el.innerHTML='<div class="note">No photo for that date.</div>';return;}
-  el.innerHTML='<div class="note">Loading…</div>';
+  if(!key){el.innerHTML='<div class="phbox">No photo for that date and view.</div>';return;}
+  el.innerHTML='<div class="skel tall" style="aspect-ratio:3/4;height:auto"></div>';
   fetch(CFG.url+'/api/photo?key='+encodeURIComponent(key),{
     headers:{'Authorization':'Bearer '+CFG.key}
   }).then(function(r){
@@ -1812,16 +2657,65 @@ function showPhoto(slot,key){
   }).then(function(b){
     if(BLOBS[slot])URL.revokeObjectURL(BLOBS[slot]);
     BLOBS[slot]=URL.createObjectURL(b);
-    el.innerHTML='<img src="'+BLOBS[slot]+'" alt="" style="width:100%;border-radius:var(--r);display:block">';
+    el.innerHTML='<img src="'+BLOBS[slot]+'" alt="" onclick="zoomPhoto(\''+slot+'\')">';
   }).catch(function(){
-    el.innerHTML='<div class="warn">Could not load that image.</div>';
+    el.innerHTML='<div class="phbox">Could not load that image.</div>';
   });
+}
+
+/* Full size in the modal. Side by side is for comparing shape; this is for
+   actually looking at one. */
+function zoomPhoto(slot){
+  if(!BLOBS[slot])return;
+  var date=(slot==='l')?PLEFT:PRIGHT;
+  openModal(
+    '<div class="mh"><div><div class="mt" id="modaltitle">'+esc(fmtDateFull(date))+'</div>'+
+    '<div class="msub">'+esc(PVIEW||'')+'</div></div>'+
+    '<div class="mnav"><button onclick="closeModal()" aria-label="Close">✕</button></div></div>'+
+    '<img id="photofull" src="'+BLOBS[slot]+'" alt="">'+
+    statLine(date));
+}
+
+function savePhotoNote(){
+  var msg=$('pnotemsg'), val=$('pnote')?$('pnote').value.trim():'';
+  msg.innerHTML='<div class="info">Saving…</div>';
+  fetch(CFG.url+'/api/photo-note',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+CFG.key,'Content-Type':'application/json'},
+    body:JSON.stringify({local_date:PRIGHT, view:PVIEW, note:val})
+  }).then(function(r){
+    if(!r.ok)throw new Error('http '+r.status);
+    msg.innerHTML='<div class="ok">Note saved.</div>';
+    toast('Note saved');
+    PHOTOS_LOADED=false; PHOTOS=null; loadPhotos();
+  }).catch(function(){
+    msg.innerHTML='<div class="warn">Could not save that note.</div>';
+    toast('Note not saved','warn');
+  });
+}
+
+/* Closest available date to the one wanted, so switching to a view that is
+   missing a particular day lands somewhere sensible rather than at the end of
+   the list. */
+function closestDate(want,dates){
+  if(!want||!dates.length)return dates[0]||null;
+  if(dates.indexOf(want)>=0)return want;
+  var t=new Date(want+'T12:00:00').getTime(), best=dates[0], gap=1e12;
+  dates.forEach(function(d){
+    var g=Math.abs(new Date(d+'T12:00:00').getTime()-t);
+    if(g<gap){gap=g;best=d;}
+  });
+  return best;
 }
 
 function setPView(v){
   PVIEW=v;
   var ds=datesForView(v);
-  PRIGHT=ds[0]||null; PLEFT=ds[ds.length-1]||null;
+  // Keep whatever dates are already chosen. Changing the angle should not
+  // change which two days you are comparing — the previous version reset both
+  // to newest and oldest every time, which threw the selection away.
+  PLEFT  = closestDate(PLEFT, ds);
+  PRIGHT = closestDate(PRIGHT, ds);
   renderPhotos();
 }
 function setPSide(side,date){
@@ -1829,26 +2723,284 @@ function setPSide(side,date){
   renderPhotos();
 }
 
-/* Measurements for a date, so the comparison is not purely visual. */
+/* Measurements for a date. Photos reach back 18 months, so this needs the long
+   history (PHOTODAYS), not the 180 days the weight chart uses. */
 function statsFor(date){
-  if(!BODYDAYS)return null;
-  return BODYDAYS.filter(function(d){return d.local_date===date;})[0]||null;
+  var src=PHOTODAYS||BODYDAYS;
+  if(!src)return null;
+  return src.filter(function(d){return d.local_date===date;})[0]||null;
 }
+
+/* Nearest reading within a few days, because a photo taken on a Sunday may sit
+   next to a weigh-in from the Saturday. The gap is always stated — a nearby
+   number presented as that day's number would be a small lie. */
+function nearestStats(date,windowDays){
+  var src=PHOTODAYS||BODYDAYS; if(!src)return null;
+  var t=new Date(date+'T12:00:00').getTime(), best=null, bestGap=1e9;
+  src.forEach(function(d){
+    if(d.weight_kg==null&&d.body_fat_pct==null)return;
+    var gap=Math.abs(new Date(d.local_date+'T12:00:00').getTime()-t)/86400000;
+    if(gap<=windowDays&&gap<bestGap){best=d;bestGap=gap;}
+  });
+  return best?{row:best,gap:Math.round(bestGap)}:null;
+}
+
+/* The 7-day window centred on a date. Real readings averaged, with the count —
+   an average of two readings and an average of seven are not the same claim. */
+function weekStats(date){
+  var src=PHOTODAYS||BODYDAYS; if(!src)return null;
+  var t=new Date(date+'T12:00:00').getTime();
+  var win=src.filter(function(d){
+    var g=Math.abs(new Date(d.local_date+'T12:00:00').getTime()-t)/86400000;
+    return g<=3.5;
+  });
+  var avg=function(k){
+    var v=win.map(function(d){return d[k];}).filter(function(x){return x!=null;});
+    return v.length?{v:v.reduce(function(a,b){return a+b;},0)/v.length,n:v.length}:null;
+  };
+  var devices=win.map(function(d){return d.body_fat_source;})
+                 .filter(function(x){return x!=null;})
+                 .filter(function(v,i,a){return a.indexOf(v)===i;});
+
+  // Raw average, on whatever scale produced it.
+  var fat=avg('body_fat_pct');
+
+  // And the same window expressed on the reference scale, so figures either
+  // side of the device change can be compared at all. Every converted value is
+  // flagged; nothing is silently restated.
+  var normVals=win.map(function(d){
+        return d.body_fat_pct==null?null:normFat(d.body_fat_pct,d.body_fat_source);
+      }).filter(function(x){return x!=null;});
+  var norm=normVals.length
+    ? {v:normVals.reduce(function(a,b){return a+b;},0)/normVals.length, n:normVals.length}
+    : null;
+
+  // ── coherent sample ──
+  // Body composition is averaged over days that carry the WHOLE triple, so
+  // weight, fat and lean always describe the same days and reconcile with each
+  // other. Averaging each metric over whatever days happen to have it produced
+  // figures that could not be squared: a weight from one set of days against a
+  // lean mass from another, differing by kilos.
+  var comp=win.filter(function(d){
+    return d.weight_kg!=null && d.body_fat_pct!=null && d.lean_mass_kg!=null;
+  });
+  var compAvg=function(fn){
+    var v=comp.map(fn).filter(function(x){return x!=null;});
+    return v.length?{v:v.reduce(function(a,b){return a+b;},0)/v.length, n:v.length}:null;
+  };
+  var compWeight=compAvg(function(d){return d.weight_kg;});
+  var leanNorm=compAvg(function(d){var L=normLean(d);return L?L.v:null;});
+  var fatComp=compAvg(function(d){return normFat(d.body_fat_pct,d.body_fat_source);});
+
+  var conv = devices.indexOf(refDevice())===-1 || devices.length>1;
+  if(fat){ fat.device = devices.length===1 ? devices[0] : null; fat.devices=devices; }
+  if(norm){ norm.converted = conv; }
+  if(fatComp){ fatComp.converted = conv; fatComp.device=devices.join(', '); }
+  if(leanNorm){ leanNorm.converted = conv; leanNorm.device=devices.join(', '); }
+
+  return {
+    weight:avg('weight_kg'),            // every day with a weight — the best weight estimate
+    fat:fat, fatNorm:norm,
+    lean:avg('lean_mass_kg'),
+    // The coherent set: these three always describe the same days.
+    compWeight:compWeight, fatComp:fatComp, leanNorm:leanNorm,
+    compDays:comp.length
+  };
+}
+
+/* ── device calibration ──
+   Zepp Life reads high against Withings. The factor comes from the database
+   rather than being written here, so re-deriving the calibration changes every
+   historical figure at once instead of leaving two generations of numbers.
+   Returns null rather than a guess for a device with no calibration. */
+function refDevice(){
+  return (DATA&&DATA.settings&&DATA.settings.body_fat_reference_device)||'Withings';
+}
+function bfFactor(){
+  var f=DATA&&DATA.settings&&Number(DATA.settings.bf_zepp_to_withings_factor);
+  return (f&&isFinite(f))?f:null;
+}
+function normFat(pct,source){
+  if(pct==null)return null;
+  if(source===refDevice())return pct;
+  if(source==='Zepp Life'){
+    var f=bfFactor();
+    return f?(pct*f):null;
+  }
+  return null;
+}
+
+/**
+ * Lean mass on the reference scale.
+ *
+ * Recomputed from weight and the CONVERTED body fat, never calibrated
+ * separately. Both scales derive lean as weight x (1 - bf/100) and store the
+ * result — verified on 450 Zepp and 136 Withings days with a residual SD under
+ * 0.05 kg. Fitting an independent lean offset would apply a second correction
+ * to a figure that already inherits the body-fat one, and lean + fat would
+ * stop summing to weight.
+ */
+function normLean(row){
+  if(!row||row.lean_mass_kg==null)return null;
+  var src=row.body_fat_source;
+  if(src===refDevice())return {v:row.lean_mass_kg, converted:false};
+  if(src==='Zepp Life'&&row.weight_kg!=null&&row.body_fat_pct!=null){
+    var f=bfFactor(); if(!f)return null;
+    return {v: row.weight_kg*(1-(row.body_fat_pct*f)/100), converted:true, device:src};
+  }
+  // Lean recorded without the weight or body fat behind it cannot be converted,
+  // and the raw figure is on the wrong scale — so it is withheld rather than
+  // shown as if it were comparable.
+  return src?null:{v:row.lean_mass_kg, converted:false};
+}
+
+function resolveMetric(date,key){
+  var ex=statsFor(date);
+  var wk=weekStats(date);
+  var src=PHOTODAYS||BODYDAYS||[];
+
+  // Third fallback: the nearest reading within ten days, with the gap stated.
+  // Every one of the 41 photos has a body-fat reading within six days, so this
+  // covers the lot without ever reaching further than the measurement is worth.
+  var nearest=function(k){
+    var t=new Date(date+'T12:00:00').getTime(), best=null, gap=1e9;
+    src.forEach(function(d){
+      if(d[k]==null)return;
+      var g=Math.abs(new Date(d.local_date+'T12:00:00').getTime()-t)/86400000;
+      if(g<=10&&g<gap){best=d;gap=g;}
+    });
+    return best?{row:best,gap:Math.round(gap)}:null;
+  };
+
+  if(key==='body_fat_pct'){
+    if(ex&&ex.body_fat_pct!=null){
+      var v=normFat(ex.body_fat_pct,ex.body_fat_source);
+      if(v!=null)return {v:v, exact:true,
+        converted: ex.body_fat_source!==refDevice(), device:ex.body_fat_source};
+    }
+    if(wk&&wk.fatComp)return {v:wk.fatComp.v, exact:false, n:wk.fatComp.n,
+      converted:wk.fatComp.converted, device:wk.fatComp.device};
+    var nb=nearest('body_fat_pct');
+    if(nb){
+      var nv=normFat(nb.row.body_fat_pct,nb.row.body_fat_source);
+      if(nv!=null)return {v:nv, exact:false, gap:nb.gap,
+        converted: nb.row.body_fat_source!==refDevice(), device:nb.row.body_fat_source};
+    }
+    return null;
+  }
+
+  if(key==='lean_mass_kg'){
+    var L=normLean(ex);
+    if(L)return {v:L.v, exact:true, converted:L.converted, device:L.device};
+    if(wk&&wk.leanNorm)return {v:wk.leanNorm.v, exact:false, n:wk.leanNorm.n,
+      converted:wk.leanNorm.converted, device:wk.leanNorm.device};
+    var nl=nearest('lean_mass_kg');
+    if(nl){
+      var LN=normLean(nl.row);
+      if(LN)return {v:LN.v, exact:false, gap:nl.gap, converted:LN.converted, device:LN.device};
+    }
+    return null;
+  }
+
+  if(ex&&ex[key]!=null)return {v:ex[key], exact:true};
+  // Weight falls back to the SAME days the composition used, so the three
+  // figures reconcile. The all-days weight average is a better weight estimate
+  // but would not square with the lean mass beside it.
+  var m = (wk&&wk.compWeight)||(wk&&wk.weight);
+  if(m)return {v:m.v, exact:false, n:m.n};
+  var nn=nearest(key);
+  if(nn)return {v:nn.row[key], exact:false, gap:nn.gap};
+  return null;
+}
+
 function statLine(date){
-  var s=statsFor(date);
-  if(!s)return '<div class="note">No measurements recorded that day.</div>';
-  var bits=[];
-  if(s.weight_kg!=null)bits.push(n1(s.weight_kg)+' kg');
-  if(s.body_fat_pct!=null)bits.push(n1(s.body_fat_pct)+'% fat');
-  if(s.lean_mass_kg!=null)bits.push(n1(s.lean_mass_kg)+' kg lean');
-  return bits.length
-    ? '<div class="note">'+esc(bits.join(' · '))+'</div>'
-    : '<div class="note">No measurements recorded that day.</div>';
+  var ex=statsFor(date);
+  var wk=weekStats(date);
+
+  // Weight, body fat and lean are ONE measurement, not three. Resolving them
+  // independently produced panels that could not be squared — an exact weight
+  // for the day beside a lean mass averaged over different days, differing by
+  // more than a kilo. So the whole triple is resolved together, from a single
+  // basis, and every figure in the panel describes the same days.
+  var trip=null, basis='', gap=0, n=0;
+
+  var full = ex && ex.weight_kg!=null && ex.body_fat_pct!=null && ex.lean_mass_kg!=null;
+  if(full){
+    var L=normLean(ex);
+    trip={w:ex.weight_kg, f:normFat(ex.body_fat_pct,ex.body_fat_source), l:L?L.v:null,
+          converted:(ex.body_fat_source!==refDevice()), device:ex.body_fat_source};
+    basis='exact';
+  }else if(wk&&wk.compWeight&&wk.fatComp&&wk.leanNorm){
+    trip={w:wk.compWeight.v, f:wk.fatComp.v, l:wk.leanNorm.v,
+          converted:wk.fatComp.converted, device:wk.fatComp.device};
+    basis='week'; n=wk.compDays;
+  }else{
+    // Nearest day carrying the whole triple.
+    var src=PHOTODAYS||BODYDAYS||[], t=new Date(date+'T12:00:00').getTime(), best=null, g=1e9;
+    src.forEach(function(d){
+      if(d.weight_kg==null||d.body_fat_pct==null||d.lean_mass_kg==null)return;
+      var gg=Math.abs(new Date(d.local_date+'T12:00:00').getTime()-t)/86400000;
+      if(gg<=10&&gg<g){best=d;g=gg;}
+    });
+    if(best){
+      var L2=normLean(best);
+      trip={w:best.weight_kg, f:normFat(best.body_fat_pct,best.body_fat_source), l:L2?L2.v:null,
+            converted:(best.body_fat_source!==refDevice()), device:best.body_fat_source};
+      basis='near'; gap=Math.round(g);
+    }
+  }
+
+  var rows='';
+  var row=function(label,val,unit){
+    if(val==null){rows+='<div><span>'+label+'</span><span class="na">no reading</span></div>';return;}
+    var marks=(basis==='exact'?'':'~')+(trip.converted?'*':'');
+    rows+='<div><span>'+label+'</span><span'+(basis==='exact'&&!trip.converted?'':' class="est"')+'>'+
+      n1(val)+' '+unit+(marks?(' '+marks):'')+'</span></div>';
+  };
+
+  if(trip){
+    row('Weight',    trip.w,'kg');
+    row('Body fat',  trip.f,'%');
+    row('Lean mass', trip.l,'kg');
+  }else{
+    rows+='<div><span>Composition</span><span class="na">no reading within 10 days</span></div>';
+  }
+
+  if(ex&&ex.phase)rows+='<div><span>Phase</span><span>'+esc(ex.phase)+'</span></div>';
+
+  var pn=photoNote(date);
+  if(pn&&pn.note)rows+='<div style="display:block"><span style="color:var(--t2)">'+esc(pn.note)+'</span></div>';
+
+  var foot='';
+  if(basis==='week'){
+    foot+='<div class="estnote">~ 7-day average around this date, '+n+' reading'+(n===1?'':'s')+
+      ' \u2014 not measured on the day.</div>';
+  }else if(basis==='near'){
+    foot+='<div class="estnote">~ nearest full reading, '+gap+' day'+(gap===1?'':'s')+
+      ' from this photo.</div>';
+  }
+  if(trip&&trip.converted){
+    foot+='<div class="estnote">* converted from '+esc(trip.device||'another scale')+
+      ' to the '+esc(refDevice())+' scale.</div>';
+  }
+  if(basis==='week'&&n>0&&n<3){
+    foot+='<div class="estnote">Only '+n+' reading'+(n===1?'':'s')+' behind this. Impedance scatters '+
+      'by more than a fortnight of real change, so read it as indicative.</div>';
+  }
+
+  return '<div class="pmeta'+(basis==='exact'?'':' pmeta-est')+'">'+rows+'</div>'+foot;
+}
+
+function photoNote(date){
+  if(!PHOTOS)return null;
+  return PHOTOS.photos.filter(function(p){
+    return p.local_date===date&&p.view===PVIEW;
+  })[0]||null;
 }
 
 function renderPhotos(){
   var el=$('bodyphotos');
-  if(!PHOTOS){el.innerHTML='<div class="note">Loading…</div>';return;}
+  if(!PHOTOS){el.innerHTML='<div class="pview"><div>'+skeleton(2,true)+'</div><div>'+skeleton(2,true)+'</div></div>';return;}
 
   if(!PHOTOS.count){
     el.innerHTML='<div class="stub"><b>No photos uploaded yet</b>'+
@@ -1869,31 +3021,68 @@ function renderPhotos(){
 
   var opts=function(sel){
     return dates.map(function(d){
-      return '<option value="'+d+'"'+(d===sel?' selected':'')+'>'+esc(fmtDate(d))+'</option>';
+      // Full date with the year — these span 18 months and "16 Feb" alone
+      // tells you nothing about which year.
+      return '<option value="'+d+'"'+(d===sel?' selected':'')+'>'+esc(fmtDateFull(d))+'</option>';
     }).join('');
   };
 
-  h+='<div class="cols" style="gap:11px">'+
-     '<div><select onchange="setPSide(\'l\',this.value)" style="margin-bottom:8px">'+opts(PLEFT)+'</select>'+
+  // .pview, not .cols — cols only becomes two columns above 900px, which is
+  // why these were stacking on the phone. A comparison you cannot see side by
+  // side is not a comparison.
+  h+='<div class="pview">'+
+     '<div class="pcol"><select onchange="setPSide(\'l\',this.value)">'+opts(PLEFT)+'</select>'+
      '<div id="ph-l"></div>'+statLine(PLEFT)+'</div>'+
-     '<div><select onchange="setPSide(\'r\',this.value)" style="margin-bottom:8px">'+opts(PRIGHT)+'</select>'+
+     '<div class="pcol"><select onchange="setPSide(\'r\',this.value)">'+opts(PRIGHT)+'</select>'+
      '<div id="ph-r"></div>'+statLine(PRIGHT)+'</div>'+
      '</div>';
 
-  // Difference between the two, if both have measurements.
-  var a=statsFor(PLEFT), b=statsFor(PRIGHT);
-  if(a&&b&&a.weight_kg!=null&&b.weight_kg!=null){
-    var dw=b.weight_kg-a.weight_kg;
-    var days=Math.round((new Date(PRIGHT)-new Date(PLEFT))/86400000);
-    h+='<div class="info" style="margin-top:11px">'+(dw>0?'+':'')+n1(dw)+' kg over '+Math.abs(days)+' days'+
-       (days?(' · '+(dw/(Math.abs(days)/7)).toFixed(2)+' kg per week'):'')+'</div>';
+  // The difference between the two, using the week average either side so a
+  // single odd weigh-in cannot make the comparison say something it should not.
+  var wa=weekStats(PLEFT), wb=weekStats(PRIGHT);
+  if(wa&&wb&&wa.weight&&wb.weight){
+    var dw=wb.weight.v-wa.weight.v;
+    var days=Math.abs(Math.round((new Date(PRIGHT)-new Date(PLEFT))/86400000));
+    var perWk=days?(dw/(days/7)):0;
+    // Relative language only, and only from the measured numbers — never from
+    // looking at the images.
+    var word = Math.abs(dw)<0.6 ? 'about the same weight'
+             : (dw<0 ? n1(Math.abs(dw))+' kg lighter' : n1(dw)+' kg heavier');
+    // Body fat: same scale both sides is a direct comparison. Different scales
+    // are compared on the reference scale, with the conversion declared.
+    var fatLine='';
+    if(wa.fat&&wb.fat){
+      var sameDevice = wa.fat.device&&wb.fat.device&&wa.fat.device===wb.fat.device;
+      if(sameDevice){
+        fatLine=' Body fat '+n1(wa.fat.v)+'% to '+n1(wb.fat.v)+'%, both '+esc(wa.fat.device)+'.';
+      }else if(wa.fatNorm&&wb.fatNorm){
+        var ci=(DATA&&DATA.settings&&DATA.settings.bf_calibration_ci_points)||'0.7';
+        fatLine=' Body fat '+n1(wa.fatNorm.v)+'% to '+n1(wb.fatNorm.v)+'% on the '+
+          esc(refDevice())+' scale — '+
+          esc([wa.fat.device,wb.fat.device].filter(Boolean).join(' and '))+
+          ' readings converted, ±'+esc(ci)+' points from the calibration itself.';
+      }else{
+        fatLine=' Body fat not compared — no calibration between these devices.';
+      }
+    }
+    h+='<div class="info" style="margin-top:11px"><b>'+esc(word)+'</b> across '+days+' days'+
+       (days>13?(' · '+perWk.toFixed(2)+' kg per week'):'')+'. '+
+       'Based on the 7-day average either side ('+wa.weight.n+' and '+wb.weight.n+' readings), '+
+       'not single weigh-ins.'+fatLine+'</div>';
   }
+
+  // A note against the photo on the right. Written by you — nothing about the
+  // body is ever inferred from the image itself.
+  var pnR=photoNote(PRIGHT);
+  h+='<div class="notebox">'+
+     '<input type="text" id="pnote" placeholder="Note for '+esc(fmtDateFull(PRIGHT))+'"'+
+     (pnR&&pnR.note?(' value="'+esc(pnR.note)+'"'):'')+'>'+
+     '<button class="btn" onclick="savePhotoNote()">Save</button></div>'+
+     '<div id="pnotemsg"></div>';
 
   h+='<div class="note">'+PHOTOS.count+' photos across '+PHOTOS.dates.length+' dates'+
      (PHOTOS.unparsed?(' · '+PHOTOS.unparsed+' with names that could not be read'):'')+
-     '. Photos are private: fetched with your key and held only in this tab.</div>'+
-     '<div class="note">Judge these against each other, not against a number. '+
-     'Body-fat estimation from photographs was tried and rejected — a relative comparison is honest, a percentage from an image is not.</div>';
+     '. Private — fetched with your key, held only in this tab.</div>';
 
   el.innerHTML=h;
   showPhoto('l',keyFor(PLEFT,PVIEW));
@@ -1912,7 +3101,7 @@ function loadGoals(){
 
 function renderGoals(){
   var el=$('goalslist');
-  if(!GOALS){el.innerHTML='<div class="note">Loading…</div>';return;}
+  if(!GOALS){el.innerHTML='<div class="card">'+skeleton(3)+'</div><div class="card">'+skeleton(3)+'</div>';return;}
   var cats=[['body','body'],['training','training'],['habit','habits'],['race','race']];
   el.innerHTML=cats.map(function(c){
     var gs=GOALS.filter(function(g){return g.category===c[0];});
@@ -2040,7 +3229,7 @@ function renderDietAhead(){
 
 function renderDietHistory(){
   var el=$('diethistory');
-  if(!DAYS14){el.innerHTML='<div class="note">Loading…</div>';return;}
+  if(!DAYS14){el.innerHTML=skeleton(4);return;}
 
   // Every one of the last 14 calendar days, whether or not there is data —
   // otherwise a missing day silently disappears instead of being visible as a
@@ -2301,10 +3490,23 @@ function paceStr(secPerKm){
   if(s===60){m++;s=0;}
   return m+':'+String(s).padStart(2,'0');
 }
-function fmtDate(iso){
+var MON3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* Guarded. An unparseable date used to render as "NaN NaN NaN" — visible
+   nonsense that looks like a data problem when it is a missing argument. An em
+   dash says "nothing here" honestly. */
+function parseDay(iso){
+  if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso))return null;
   var d=new Date(iso+'T12:00:00');
-  return DAYS[d.getDay()]+' '+d.getDate()+' '+
-    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return isNaN(d.getTime())?null:d;
+}
+function fmtDate(iso){
+  var d=parseDay(iso); if(!d)return '—';
+  return DAYS[d.getDay()]+' '+d.getDate()+' '+MON3[d.getMonth()];
+}
+/* With the year. Photos span 18 months, so "Sun 16 Feb" is genuinely ambiguous. */
+function fmtDateFull(iso){
+  var d=parseDay(iso); if(!d)return '—';
+  return DAYS[d.getDay()]+' '+d.getDate()+' '+MON3[d.getMonth()]+' '+d.getFullYear();
 }
 
 /* Monday-start weekly buckets from the run list. */
@@ -2327,7 +3529,7 @@ function weeklyKm(runs,weeks){
 function renderRunning(){
   if(!RUNS){
     $('formtiles').innerHTML='';
-    $('runlist').innerHTML='<div class="note">Connect to load runs.</div>';
+    $('runlist').innerHTML='<div style="padding:14px">'+skeleton(4)+'</div>';
     return;
   }
   var race=(DATA&&DATA.race)||{};
@@ -2369,6 +3571,38 @@ function renderRunning(){
     widget('28-day volume', n1(km28),' km', RUNS.length+' runs')+
     widget('Longest in window', RSPIKE?RSPIKE.longest_km:null,' km',
            RSPIKE?('since '+RSPIKE.window_opens):'');
+
+  // ── prescribed sessions ahead ──
+  // The coaching half: what to run, at what pace and heart rate, what to take
+  // on the way round, and why the session exists at all.
+  var today2=isoOf(new Date());
+  var upcoming=(PLAN||[]).filter(function(s){
+    return s.local_date>=today2 && (s.run_km_min!=null||s.session_type==='race');
+  }).slice(0,4);
+
+  $('nextruns').innerHTML = upcoming.length
+    ? upcoming.map(function(s){
+        var isToday=s.local_date===today2;
+        var km=(s.run_km_max&&s.run_km_max!==s.run_km_min)
+          ? (s.run_km_min+'–'+s.run_km_max) : s.run_km_min;
+        var tag = s.session_type==='race' ? '<span class="pill red">race</span>'
+                : isToday ? '<span class="pill blue">today</span>'
+                : (s.local_date==='2026-08-15' ? '<span class="pill amber">rehearsal</span>' : '');
+        return '<div class="card"'+(isToday?' style="border-color:var(--accent)"':'')+'>'+
+          '<div class="ch"><span class="ct">'+esc(s.day_label)+tag+'</span>'+
+          '<span class="cm num">'+esc(fmtDate(s.local_date))+'</span></div>'+
+          '<div class="grid g2" style="margin-bottom:9px">'+
+            '<div class="tile"><div class="tl">Distance</div><div class="tv num">'+esc(km+' km')+'</div></div>'+
+            '<div class="tile"><div class="tl">Pace</div><div class="tv num" style="font-size:14px;line-height:1.3">'+
+              esc(s.run_pace_note||'—')+'</div></div>'+
+          '</div>'+
+          (s.run_hr_note?'<div class="info"><b>Heart rate.</b> '+esc(s.run_hr_note)+'</div>':'')+
+          (s.fuel_note?'<div class="ok"><b>Fuelling.</b> '+esc(s.fuel_note)+'</div>':'')+
+          (s.why?'<div class="note"><b>Why this session:</b> '+esc(s.why)+'</div>':'')+
+          '</div>';
+      }).join('')
+    : '<div class="card"><div class="note">No runs left in the current plan. '+
+      'The block ends on 22 August and a new one is built after it.</div></div>';
 
   // ── coach flags ──
   var flags='';
@@ -2599,6 +3833,7 @@ function fuel(){
 
 /* ─────────────────────────── boot ─────────────────────────── */
 function boot(){
+  loadTheme();
   loadCfg();
   buildNav();
   buildStubs();
@@ -2639,6 +3874,24 @@ function boot(){
     refresh();
   });
   if(!navigator.onLine) setSync('Offline · showing last loaded data','warn');
+
+  // Safari fires these non-standard events for a pinch. touch-action should
+  // already have prevented it, but iOS has been inconsistent about that across
+  // versions and these have worked throughout. Belt and braces.
+  ['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+    document.addEventListener(ev,function(e){ e.preventDefault(); },{passive:false});
+  });
+
+  // Double-tap zoom, for the same reason. Two taps inside 300ms anywhere that
+  // is not a form control get the second one suppressed.
+  var lastTap=0;
+  document.addEventListener('touchend',function(e){
+    var now=Date.now();
+    if(now-lastTap<300 && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){
+      e.preventDefault();
+    }
+    lastTap=now;
+  },{passive:false});
 
   // Escape closes whatever is open. Small thing, but a modal you cannot
   // dismiss with the keyboard is a modal that traps you.
